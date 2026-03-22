@@ -57,6 +57,96 @@ def _cooldown_remaining(last_dt: datetime) -> str:
     return f"⏳ {int(remaining // 60)}m {int(remaining % 60)}s until next post"
 
 
+def _extract_urls(text: str) -> list[str]:
+    import re
+    return re.findall(r"https?://[^\s)]+", text or "")
+
+
+def _extract_hashtags(text: str) -> list[str]:
+    import re
+    return re.findall(r"#([A-Za-z0-9_]+)", text or "")
+
+
+def _has_hook(text: str) -> bool:
+    import re
+    first_line = (text or "").splitlines()[0].strip() if text else ""
+    if not first_line:
+        return False
+    first_sentence = re.split(r"(?<=[.!?])\s+", first_line, maxsplit=1)[0].strip().lower()
+    if "?" in first_sentence:
+        return True
+    starters = (
+        "did you know",
+        "what if",
+        "why",
+        "most people",
+        "boost",
+        "stop",
+        "try",
+        "here's how",
+    )
+    return first_sentence.startswith(starters)
+
+
+def _quality_snapshot(posts: list[dict]) -> dict:
+    if not posts:
+        return {
+            "sample_size": 0,
+            "avg_length": 0,
+            "hook_rate": 0.0,
+            "link_ratio": 0.0,
+            "avg_hashtags": 0.0,
+            "category_diversity": 0.0,
+            "recommendations": ["Post more samples before quality analysis."],
+        }
+
+    sample = posts[-12:]
+    total = len(sample)
+
+    lengths = [len(p.get("content", "")) for p in sample]
+    hooks = sum(1 for p in sample if _has_hook(p.get("content", "")))
+    links = sum(1 for p in sample if _extract_urls(p.get("content", "")))
+    hashtags = [len(_extract_hashtags(p.get("content", ""))) for p in sample]
+
+    categories = []
+    for p in sample:
+        category = str(p.get("category", "")).strip().lower()
+        if category and category != "general":
+            categories.append(category)
+
+    category_diversity = (len(set(categories)) / total) if total else 0.0
+
+    quality = {
+        "sample_size": total,
+        "avg_length": int(sum(lengths) / total),
+        "hook_rate": hooks / total,
+        "link_ratio": links / total,
+        "avg_hashtags": round(sum(hashtags) / total, 2),
+        "category_diversity": round(category_diversity, 2),
+        "recommendations": [],
+    }
+
+    recs: list[str] = []
+    if quality["hook_rate"] < 0.70:
+        recs.append("Increase stronger first-line hooks (questions/surprise claims).")
+    if quality["avg_length"] > 230:
+        recs.append("Shorten posts; tighter tweets usually perform better.")
+    if quality["avg_hashtags"] > 2.0:
+        recs.append("Reduce hashtag load; keep to 0-2 per post.")
+    if quality["link_ratio"] < 0.10:
+        recs.append("Add occasional trusted links (about 10-30%) for authority.")
+    elif quality["link_ratio"] > 0.45:
+        recs.append("Use fewer links; too many can hurt engagement.")
+    if quality["category_diversity"] < 0.25:
+        recs.append("Rotate post categories more (avoid repeating the same lane).")
+
+    if not recs:
+        recs.append("Quality mix looks healthy. Keep rotating hooks, categories, and formats.")
+
+    quality["recommendations"] = recs
+    return quality
+
+
 def do_backup():
     BACKUP_DIR.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -142,6 +232,7 @@ def build_report() -> dict:
             "cooldown_status": _cooldown_remaining(last_dt) if last_dt else "✅ Ready to post",
             "last_content_preview": last_content,
             "last_category": last_category,
+            "quality": _quality_snapshot(posts),
         })
 
     # ── AFM ────────────────────────────────────────────────────────────────
@@ -180,6 +271,19 @@ def print_report(report: dict):
             print(f"  Category : {acc['last_category']}")
         if acc["last_content_preview"]:
             print(f"  Preview  : \"{acc['last_content_preview']}...\"")
+        quality = acc.get("quality", {})
+        if quality.get("sample_size", 0) > 0:
+            print(
+                "  Quality  : "
+                f"hooks={int(quality.get('hook_rate', 0.0) * 100)}% | "
+                f"links={int(quality.get('link_ratio', 0.0) * 100)}% | "
+                f"avg_len={quality.get('avg_length', 0)} | "
+                f"avg_tags={quality.get('avg_hashtags', 0)} | "
+                f"cat_div={quality.get('category_diversity', 0)}"
+            )
+            top_reco = (quality.get("recommendations") or [""])[0]
+            if top_reco:
+                print(f"  Next Fix : {top_reco}")
         print()
 
     if not report["twitter"]:
