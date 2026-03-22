@@ -6,6 +6,7 @@ import json
 import shutil
 import tempfile
 import platform
+from difflib import SequenceMatcher
 
 from cache import *
 from config import *
@@ -139,12 +140,11 @@ class Twitter:
         post_content = self._clean_tweet(post_content)
         now: datetime = datetime.now()
 
-        # Deduplication guard: skip if identical content was posted recently
+        # Deduplication guard: skip if recent content is identical or too similar
         existing_posts = self.get_posts()
-        for prev in existing_posts:
-            if prev.get("content", "").strip() == post_content.strip():
-                warning("Duplicate post detected — skipping to avoid spam.")
-                return
+        if self._is_too_similar_to_recent(post_content, existing_posts):
+            warning("Post is too similar to recent content — skipping to avoid spam.")
+            return
 
         # Cooldown guard: enforce minimum gap between posts (default 30 min)
         if existing_posts:
@@ -319,6 +319,106 @@ class Twitter:
 
         return text
 
+    def _normalize_tweet(self, text: str) -> str:
+        """
+        Normalizes tweet text for similarity comparison.
+
+        Args:
+            text (str): Raw or cleaned tweet text
+
+        Returns:
+            normalized (str): Simplified text for comparison
+        """
+        text = text.lower()
+        text = re.sub(r"https?://\S+", " ", text)
+        text = re.sub(r"[@#]", "", text)
+        text = re.sub(r"[^a-z0-9\s]", " ", text)
+        text = re.sub(r"\s+", " ", text).strip()
+        return text
+
+    def _is_too_similar_to_recent(self, text: str, posts: List[dict], limit: int = 10) -> bool:
+        """
+        Returns True when the candidate tweet is too similar to recent posts.
+
+        Args:
+            text (str): Candidate tweet text
+            posts (List[dict]): Existing cached posts
+            limit (int): Number of recent posts to compare against
+
+        Returns:
+            is_too_similar (bool): Whether the tweet should be rejected
+        """
+        candidate = self._normalize_tweet(text)
+        if not candidate:
+            return True
+
+        candidate_tokens = set(candidate.split())
+        recent_posts = posts[-limit:]
+
+        for prev in recent_posts:
+            previous = self._normalize_tweet(prev.get("content", ""))
+            if not previous:
+                continue
+
+            if previous == candidate:
+                return True
+
+            similarity = SequenceMatcher(None, candidate, previous).ratio()
+            if similarity >= 0.72:
+                return True
+
+            previous_tokens = set(previous.split())
+            if candidate_tokens and previous_tokens:
+                shared_tokens = len(candidate_tokens & previous_tokens)
+                overlap = shared_tokens / len(candidate_tokens | previous_tokens)
+                overlap_of_smaller = shared_tokens / min(len(candidate_tokens), len(previous_tokens))
+                if overlap >= 0.68 or overlap_of_smaller >= 0.70:
+                    return True
+
+        return False
+
+    def _has_strong_hook(self, text: str) -> bool:
+        """
+        Heuristic to reject flat openings and prefer stronger first lines.
+
+        Args:
+            text (str): Cleaned tweet text
+
+        Returns:
+            has_hook (bool): Whether the opening is strong enough
+        """
+        first_line = text.splitlines()[0].strip()
+        if not first_line:
+            return False
+
+        first_sentence = re.split(r"(?<=[.!?])\s+", first_line, maxsplit=1)[0].strip()
+        hook_text = first_sentence[:100]
+
+        strong_starts = (
+            "did you know",
+            "want to",
+            "stop ",
+            "try ",
+            "boost ",
+            "use ",
+            "the fastest",
+            "the easiest",
+            "most people",
+            "your ",
+            "why ",
+            "what if",
+            "here's how",
+        )
+
+        if "?" in hook_text:
+            return True
+
+        if re.match(r"^(\d+|[A-Z][a-z]+:\s)", first_sentence):
+            return True
+
+        lowered = hook_text.lower()
+        return lowered.startswith(strong_starts)
+
     def generate_post(self) -> str:
         """
         Generates a post for the Twitter account based on the topic.
@@ -330,30 +430,50 @@ class Twitter:
         if get_verbose():
             info("Generating a post...")
 
-        completion: str | None = None
-        for attempt in range(3):
+        existing_posts = self.get_posts()
+        rejection_reasons: list[str] = []
+
+        for attempt in range(5):
             try:
                 completion = generate_text(
                     f"Generate a Twitter post about: {self.topic} in {get_twitter_language()}. "
                     "The Limit is 2 sentences. Choose a specific sub-topic of the provided topic. "
+                    "Start with a strong hook in the first sentence: a question, surprising fact, bold claim, or concrete tip. "
+                    "Avoid repeating ideas, phrasing, or examples from recent posts. "
                     "Return ONLY the tweet text, no preamble or explanation."
                 )
-                if completion:
-                    break
+                if not completion:
+                    rejection_reasons.append(f"Attempt {attempt + 1}: empty response")
+                    continue
             except Exception as exc:
-                if attempt < 2:
+                if attempt < 4:
                     time.sleep(2 ** attempt)  # exponential back-off: 1s, 2s
                     continue
-                error(f"LLM failed after 3 attempts: {exc}")
+                error(f"LLM failed after 5 attempts: {exc}")
                 sys.exit(1)
 
-        if not completion:
-            error("Failed to generate a post. Please try again.")
-            sys.exit(1)
+            cleaned = self._clean_tweet(completion)
 
-        cleaned = self._clean_tweet(completion)
+            if not self._has_strong_hook(cleaned):
+                rejection_reasons.append(
+                    f"Attempt {attempt + 1}: weak opening hook"
+                )
+                continue
 
-        if get_verbose():
-            info(f"Tweet length: {len(cleaned)} chars")
+            if self._is_too_similar_to_recent(cleaned, existing_posts):
+                rejection_reasons.append(
+                    f"Attempt {attempt + 1}: too similar to recent posts"
+                )
+                continue
 
-        return cleaned
+            if get_verbose():
+                info(f"Tweet length: {len(cleaned)} chars")
+
+            return cleaned
+
+        if rejection_reasons and get_verbose():
+            for reason in rejection_reasons:
+                warning(reason)
+
+        error("Failed to generate a strong, non-duplicate post. Please try again.")
+        sys.exit(1)

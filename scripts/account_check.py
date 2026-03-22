@@ -46,6 +46,12 @@ def print_account(acc: dict):
     posts = acc.get("posts", [])
     print("=" * 60)
     print(f"Nickname      : {acc.get('nickname', '?')}")
+    if acc.get("display_name"):
+        print(f"Display Name  : {acc.get('display_name')}")
+    if acc.get("x_username"):
+        print(f"X Username    : {acc.get('x_username')}")
+    if acc.get("login_email"):
+        print(f"Login Email   : {acc.get('login_email')}")
     print(f"UUID          : {acc.get('id', '?')}")
     print(f"Topic         : {acc.get('topic', '?')}")
     print(f"Firefox profile: {acc.get('firefox_profile', '?')}")
@@ -71,7 +77,10 @@ def main():
     if args.list or not args.identifier:
         print("Available Twitter accounts:\n")
         for a in accounts:
-            print(f"- {a.get('nickname','?'):20s}  {a.get('id','?')}")
+            username = a.get("x_username", "")
+            display_name = a.get("display_name", "")
+            suffix = f"  {display_name} {username}".rstrip()
+            print(f"- {a.get('nickname','?'):20s}  {a.get('id','?')}{suffix}")
         return
 
     ident = args.identifier.lower()
