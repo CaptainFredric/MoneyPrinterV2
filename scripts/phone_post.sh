@@ -13,6 +13,8 @@
 #   phone_post.sh              → post from all twitter accounts (headless)
 #   phone_post.sh status       → show status report (no browser, instant)
 #   phone_post.sh performance  → show linear growth phase + next objective
+#   phone_post.sh autotune      → preview ratio tuning changes (dry-run)
+#   phone_post.sh autotune-apply→ apply ratio tuning changes
 #   phone_post.sh backup       → manual cache backup
 #   phone_post.sh health       → daemon + report health check
 #   phone_post.sh check <id>   → inspect one twitter account
@@ -66,6 +68,12 @@ case "$MODE" in
         ;;
     performance)
         "$VENV_PYTHON" scripts/performance_report.py
+        ;;
+    autotune)
+        "$VENV_PYTHON" scripts/auto_tune_ratios.py --dry-run
+        ;;
+    autotune-apply)
+        "$VENV_PYTHON" scripts/auto_tune_ratios.py --apply
         ;;
     health)
         bash "$ROOT_DIR/scripts/health_check.sh"
