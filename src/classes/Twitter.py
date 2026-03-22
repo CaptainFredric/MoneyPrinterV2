@@ -1,6 +1,7 @@
 import re
 import sys
 import time
+import random
 import os
 import json
 import shutil
@@ -223,11 +224,13 @@ class Twitter:
             time.sleep(2)  # Non-fatal fallback
 
         # Add the post to the cache
+        post_urls = self._extract_urls(body)
         self.add_post(
             {
                 "content": body,
                 "date": now.strftime("%m/%d/%Y, %H:%M:%S"),
                 "category": self._infer_category_from_text(body),
+                "format": "link" if post_urls else "text",
             }
         )
 
@@ -344,6 +347,136 @@ class Twitter:
         text = re.sub(r"[^a-z0-9\s]", " ", text)
         text = re.sub(r"\s+", " ", text).strip()
         return text
+
+    def _extract_urls(self, text: str) -> list[str]:
+        """
+        Extracts URLs from tweet text.
+
+        Args:
+            text (str): Tweet text
+
+        Returns:
+            urls (list[str]): URLs in order of appearance
+        """
+        return re.findall(r"https?://[^\s)]+", text or "")
+
+    def _get_account_settings(self) -> dict:
+        """
+        Loads account settings from twitter cache for this account UUID.
+
+        Returns:
+            settings (dict): Account settings dict or empty dict
+        """
+        try:
+            with open(get_twitter_cache_path(), "r") as file:
+                parsed = json.load(file)
+            for account in parsed.get("accounts", []):
+                if account.get("id") == self.account_uuid:
+                    return account
+        except Exception:
+            pass
+        return {}
+
+    def _trusted_link_pool(self) -> list[str]:
+        """
+        Returns deduplicated trusted links for this account.
+
+        Supports cache keys: trusted_links, link_pool, source_links
+
+        Returns:
+            links (list[str]): Valid http/https URLs
+        """
+        account = self._get_account_settings()
+        links = []
+        for key in ("trusted_links", "link_pool", "source_links"):
+            value = account.get(key)
+            if isinstance(value, list):
+                links.extend(value)
+
+        seen = set()
+        cleaned: list[str] = []
+        for link in links:
+            if not isinstance(link, str):
+                continue
+            link = link.strip()
+            if not re.match(r"^https?://", link):
+                continue
+            if link in seen:
+                continue
+            seen.add(link)
+            cleaned.append(link)
+
+        return cleaned
+
+    def _recent_urls(self, posts: List[dict], limit: int = 12) -> set[str]:
+        """
+        Collects URLs used in recent posts.
+
+        Args:
+            posts (List[dict]): Existing cached posts
+            limit (int): Number of recent posts to inspect
+
+        Returns:
+            urls (set[str]): Unique recent URLs
+        """
+        urls: set[str] = set()
+        for prev in posts[-limit:]:
+            for url in self._extract_urls(prev.get("content", "")):
+                urls.add(url)
+        return urls
+
+    def _target_link_ratio(self) -> float:
+        """
+        Returns desired fraction of link posts.
+
+        Account-level override: link_post_ratio in .mp/twitter.json
+
+        Returns:
+            ratio (float): Clamped to [0.0, 0.8]
+        """
+        account = self._get_account_settings()
+        configured = account.get("link_post_ratio")
+        if isinstance(configured, (int, float)):
+            return max(0.0, min(0.8, float(configured)))
+
+        topic = (self.topic or "").lower()
+        if any(key in topic for key in ("productivity", "tools", "workflow")):
+            return 0.30
+        if any(key in topic for key in ("fact", "trivia", "weird", "wierd")):
+            return 0.15
+        return 0.20
+
+    def _should_try_link_post(self, posts: List[dict]) -> bool:
+        """
+        Decides whether this generation should attempt a link-style post.
+
+        Returns:
+            use_link_mode (bool): Whether to request one trusted URL
+        """
+        trusted_links = self._trusted_link_pool()
+        if not trusted_links:
+            return False
+
+        recent = posts[-12:]
+        if not recent:
+            return random.random() < self._target_link_ratio()
+
+        recent_link_count = 0
+        for prev in recent:
+            if self._extract_urls(prev.get("content", "")):
+                recent_link_count += 1
+
+        current_ratio = recent_link_count / len(recent)
+        target_ratio = self._target_link_ratio()
+
+        # If the latest post already contains a URL, bias against back-to-back links.
+        latest_has_url = bool(self._extract_urls(recent[-1].get("content", "")))
+        if latest_has_url:
+            return False
+
+        if current_ratio < target_ratio:
+            return random.random() < 0.75
+        return random.random() < 0.10
 
     def _is_too_similar_to_recent(self, text: str, posts: List[dict], limit: int = 10) -> bool:
         """
@@ -654,7 +787,7 @@ class Twitter:
                 categories.append(category)
         return categories
 
-    def _build_prompt(self, existing_posts: list[dict]) -> str:
+    def _build_prompt(self, existing_posts: list[dict], use_link_mode: bool = False) -> str:
         """
         Builds a context-aware LLM prompt that steers the model away from
         recently used ideas and toward fresh angles.
@@ -718,6 +851,26 @@ class Twitter:
                 "  - Pick a different category than recent posts when possible.\n"
             )
 
+        link_block = ""
+        trusted_links = self._trusted_link_pool()
+        if use_link_mode and trusted_links:
+            recent_urls = self._recent_urls(existing_posts, limit=12)
+            fresh_links = [link for link in trusted_links if link not in recent_urls]
+            candidate_links = (fresh_links or trusted_links)[:6]
+            joined_links = "\n".join(f"  - {link}" for link in candidate_links)
+            link_block = (
+                "\nTrusted link mode is ON:\n"
+                "  - Include exactly one URL from this approved list.\n"
+                "  - Never invent or alter URLs.\n"
+                "  - Keep the tweet readable even with the link included.\n"
+                f"{joined_links}\n"
+            )
+        elif trusted_links:
+            link_block = (
+                "\nTrusted links are configured, but this post is text-only mode.\n"
+                "Do not include any URL in this tweet.\n"
+            )
+
         return (
             f"You are a concise, engaging Twitter writer for the topic: '{self.topic}'.\n"
             f"Language: {get_twitter_language()}.\n"
@@ -732,7 +885,7 @@ class Twitter:
             "  7. Rotate sub-categories across posts instead of repeating the same lane.\n"
             "  8. No preamble, no labels, no hashtag spam (max 2 hashtags if used).\n"
             "  9. Return ONLY the raw tweet text."
-            f"{avoid_block}{opening_block}{hashtag_block}{cta_block}{category_block}"
+            f"{avoid_block}{opening_block}{hashtag_block}{cta_block}{category_block}{link_block}"
         )
 
     def generate_post(self) -> str:
@@ -753,11 +906,14 @@ class Twitter:
         recent_categories = self._recent_categories(existing_posts, limit=6)
         recent_category_set = set(recent_categories)
         category_pool = self._topic_category_pool()
+        trusted_links = self._trusted_link_pool()
+        recent_urls = self._recent_urls(existing_posts, limit=12)
+        use_link_mode = self._should_try_link_post(existing_posts)
         rejection_reasons: list[str] = []
 
         for attempt in range(5):
             try:
-                prompt = self._build_prompt(existing_posts)
+                prompt = self._build_prompt(existing_posts, use_link_mode=use_link_mode)
                 completion = generate_text(prompt)
                 if not completion:
                     rejection_reasons.append(f"Attempt {attempt + 1}: empty response")
@@ -805,6 +961,31 @@ class Twitter:
             if cta_signature and cta_signature in recent_cta_signatures:
                 rejection_reasons.append(
                     f"Attempt {attempt + 1}: CTA ending too repetitive"
+                )
+                continue
+
+            candidate_urls = self._extract_urls(cleaned)
+            if candidate_urls:
+                if len(candidate_urls) > 1:
+                    rejection_reasons.append(
+                        f"Attempt {attempt + 1}: too many links in one post"
+                    )
+                    continue
+
+                if trusted_links and candidate_urls[0] not in trusted_links:
+                    rejection_reasons.append(
+                        f"Attempt {attempt + 1}: untrusted or invented link"
+                    )
+                    continue
+
+                if candidate_urls[0] in recent_urls and len(set(trusted_links) - recent_urls) > 0:
+                    rejection_reasons.append(
+                        f"Attempt {attempt + 1}: link reused too soon"
+                    )
+                    continue
+            elif use_link_mode and trusted_links and attempt < 3:
+                rejection_reasons.append(
+                    f"Attempt {attempt + 1}: link mode expected one trusted URL"
                 )
                 continue
 

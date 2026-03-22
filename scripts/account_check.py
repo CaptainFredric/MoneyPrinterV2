@@ -61,6 +61,9 @@ def print_account(acc: dict):
         print(f"Avatar Idea   : {acc.get('avatar_idea')}")
     if acc.get("banner_idea"):
         print(f"Banner Idea   : {acc.get('banner_idea')}")
+    trusted_links = acc.get("trusted_links") or acc.get("link_pool") or acc.get("source_links") or []
+    if isinstance(trusted_links, list) and trusted_links:
+        print(f"Trusted Links : {len(trusted_links)} configured")
     print(f"Posts         : {len(posts)}")
     print(f"Last Post     : {fmt_last_post(posts)}")
     if posts:
