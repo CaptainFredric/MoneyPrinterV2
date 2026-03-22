@@ -419,10 +419,47 @@ class Twitter:
         lowered = hook_text.lower()
         return lowered.startswith(strong_starts)
 
+    def _build_prompt(self, existing_posts: list[dict]) -> str:
+        """
+        Builds a context-aware LLM prompt that steers the model away from
+        recently used ideas and toward fresh angles.
+
+        Args:
+            existing_posts (list[dict]): Cached posts for this account
+
+        Returns:
+            prompt (str): Fully formatted LLM prompt
+        """
+        recent_snippets = [
+            p.get("content", "")[:80].strip()
+            for p in existing_posts[-8:]
+            if p.get("content")
+        ]
+
+        avoid_block = ""
+        if recent_snippets:
+            joined = "\n".join(f"  - {s}" for s in recent_snippets)
+            avoid_block = (
+                f"\n\nRecently posted (DO NOT repeat these ideas, angles, or examples):\n{joined}\n"
+            )
+
+        return (
+            f"You are a concise, engaging Twitter writer for the topic: '{self.topic}'.\n"
+            f"Language: {get_twitter_language()}.\n"
+            "Write exactly ONE tweet — maximum 2 sentences, under 270 characters.\n"
+            "Rules:\n"
+            "  1. Open with a strong hook: a question, surprising fact, bold claim, or specific actionable tip.\n"
+            "  2. Choose a SPECIFIC sub-angle — avoid generic advice.\n"
+            "  3. Do NOT repeat any idea, phrasing, tool name, or example from the recent posts listed below.\n"
+            "  4. No preamble, no labels, no hashtag spam (max 2 hashtags if used).\n"
+            "  5. Return ONLY the raw tweet text."
+            f"{avoid_block}"
+        )
+
     def generate_post(self) -> str:
         """
         Generates a post for the Twitter account based on the topic.
-        Retries up to 3 times on LLM failure.
+        Uses context-aware prompting and retries up to 5 times.
 
         Returns:
             post (str): The post
@@ -435,19 +472,18 @@ class Twitter:
 
         for attempt in range(5):
             try:
-                completion = generate_text(
-                    f"Generate a Twitter post about: {self.topic} in {get_twitter_language()}. "
-                    "The Limit is 2 sentences. Choose a specific sub-topic of the provided topic. "
-                    "Start with a strong hook in the first sentence: a question, surprising fact, bold claim, or concrete tip. "
-                    "Avoid repeating ideas, phrasing, or examples from recent posts. "
-                    "Return ONLY the tweet text, no preamble or explanation."
-                )
+                prompt = self._build_prompt(existing_posts)
+                completion = generate_text(prompt)
                 if not completion:
                     rejection_reasons.append(f"Attempt {attempt + 1}: empty response")
+                    time.sleep(1)
                     continue
             except Exception as exc:
                 if attempt < 4:
-                    time.sleep(2 ** attempt)  # exponential back-off: 1s, 2s
+                    wait = 2 ** attempt
+                    if get_verbose():
+                        warning(f"LLM error (attempt {attempt + 1}): {exc}. Retrying in {wait}s...")
+                    time.sleep(wait)
                     continue
                 error(f"LLM failed after 5 attempts: {exc}")
                 sys.exit(1)

@@ -141,6 +141,25 @@ def _backup_caches():
 
 
 # ── Job runner ─────────────────────────────────────────────────────────────
+def _last_post_preview(account_id: str, max_len: int = 120) -> str | None:
+    """
+    Reads .mp/twitter.json and returns a truncated preview of the most recent
+    post for *account_id*, or None if nothing can be found.
+    """
+    try:
+        with open(ROOT_DIR / ".mp" / "twitter.json", "r") as fh:
+            data = json.load(fh)
+        for acc in data.get("accounts", []):
+            if acc.get("id") == account_id:
+                posts = acc.get("posts", [])
+                if posts:
+                    text = posts[-1].get("content", "").strip()
+                    return text[:max_len] + ("…" if len(text) > max_len else "")
+    except Exception:
+        pass
+    return None
+
+
 def _run_job(provider: str, account_id: str, model: str,
              headless: bool, dry_run: bool, nickname: str = "") -> bool:
     """
@@ -169,6 +188,9 @@ def _run_job(provider: str, account_id: str, model: str,
         )
         if result.returncode == 0:
             log.info(f"✅ Job completed: {label}")
+            preview = _last_post_preview(account_id)
+            if preview:
+                log.info(f"📝 Posted: {preview}")
             return True
         else:
             log.error(f"❌ Job exited with code {result.returncode}: {label}")
