@@ -16,3 +16,6 @@
 2026-03-22 02:07:21,975 [INFO] ============================================================
 2026-03-22 10:00:26,156 [INFO] ▶  Starting job: twitter/EyeCatcher
 2026-03-22 10:01:58,676 [INFO] ✅ Job completed: twitter/EyeCatcher
+2026-03-22 13:00:11,207 [INFO] ▶  Starting job: twitter/niche_launch_1
+2026-03-22 13:01:48,173 [INFO] ✅ Job completed: twitter/niche_launch_1
+2026-03-22 13:17:32,924 [INFO] Received signal 15 — shutting down after current tick.
