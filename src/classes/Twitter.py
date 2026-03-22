@@ -3,6 +3,7 @@ import sys
 import time
 import os
 import json
+import platform
 
 from cache import *
 from config import *
@@ -11,7 +12,6 @@ from llm_provider import generate_text
 from typing import List, Optional
 from datetime import datetime
 from termcolor import colored
-from selenium_firefox import *
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.service import Service
@@ -47,6 +47,10 @@ class Twitter:
 
         # Initialize the Firefox profile
         self.options: Options = Options()
+
+        firefox_app_binary = "/Applications/Firefox.app/Contents/MacOS/firefox"
+        if platform.system() == "Darwin" and os.path.exists(firefox_app_binary):
+            self.options.binary_location = firefox_app_binary
 
         # Set headless state of browser
         if get_headless():
