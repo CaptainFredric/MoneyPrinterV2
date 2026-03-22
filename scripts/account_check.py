@@ -55,6 +55,12 @@ def print_account(acc: dict):
     print(f"UUID          : {acc.get('id', '?')}")
     print(f"Topic         : {acc.get('topic', '?')}")
     print(f"Firefox profile: {acc.get('firefox_profile', '?')}")
+    if acc.get("bio_draft"):
+        print(f"Bio Draft     : {acc.get('bio_draft')}")
+    if acc.get("avatar_idea"):
+        print(f"Avatar Idea   : {acc.get('avatar_idea')}")
+    if acc.get("banner_idea"):
+        print(f"Banner Idea   : {acc.get('banner_idea')}")
     print(f"Posts         : {len(posts)}")
     print(f"Last Post     : {fmt_last_post(posts)}")
     if posts:
