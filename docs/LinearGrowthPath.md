@@ -38,14 +38,19 @@ Instead of chasing many tweaks at once, we progress through one phase at a time.
 ---
 
 ## Daily Operating Loop (Linear)
-1. Run `python3 scripts/performance_report.py`
+1. Run one command: `bash scripts/phone_post.sh next`
 2. Read **Current Phase** and **Next Objective**
-3. Preview tuning: `python3 scripts/auto_tune_ratios.py --dry-run`
-4. Apply tuning only when it supports current objective: `python3 scripts/auto_tune_ratios.py --apply`
-5. Re-check after 3–7 posts, then advance phase
+3. Apply phase-locked tuning if needed: `python3 scripts/auto_tune_ratios.py --apply`
+4. Re-check after 3–7 posts, then advance phase
 
 ### Safety rule
 - Auto-tuning has a per-account cooldown (12h) to avoid ratio thrashing.
 - Do not force-apply tuning repeatedly within the same day.
+- Tuning is phase-locked by default:
+	- Phase 1: no ratio increases
+	- Phase 2: tune link/media only
+	- Phase 3: tune citation only
+	- Phase 4: tune all ratios
+- Advanced override (use sparingly): `python3 scripts/auto_tune_ratios.py --apply --no-phase-lock`
 
 This keeps the project directional and avoids optimization thrash.
