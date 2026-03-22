@@ -183,14 +183,35 @@ def _run_job(provider: str, account_id: str, model: str,
         result = subprocess.run(
             cmd,
             env=env,
-            capture_output=False,
+            capture_output=True,
+            text=True,
             timeout=300,  # 5-minute hard timeout per job
         )
+        combined_output = "\n".join(
+            part for part in [result.stdout or "", result.stderr or ""] if part
+        )
+
+        post_status = "unknown"
+        for line in combined_output.splitlines():
+            if line.startswith("MPV2_POST_STATUS:"):
+                post_status = line.split(":", 1)[1].strip().lower() or "unknown"
+                continue
+            if line.strip():
+                log.info(line.strip())
+
         if result.returncode == 0:
             log.info(f"✅ Job completed: {label}")
-            preview = _last_post_preview(account_id)
-            if preview:
-                log.info(f"📝 Posted: {preview}")
+            if post_status == "posted":
+                preview = _last_post_preview(account_id)
+                if preview:
+                    log.info(f"📝 Posted: {preview}")
+            elif post_status.startswith("skipped:"):
+                reason = post_status.split(":", 1)[1]
+                log.info(f"⏭️ Job skipped: {label} ({reason})")
+            elif provider == "twitter":
+                log.warning(
+                    f"Job status unknown for {label}; cron did not emit post marker."
+                )
             return True
         else:
             log.error(f"❌ Job exited with code {result.returncode}: {label}")
