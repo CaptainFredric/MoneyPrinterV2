@@ -102,13 +102,17 @@ def get_firefox_profile_path() -> str:
 
 def get_headless() -> bool:
     """
-    Gets the headless flag from the config file.
+    Gets the headless flag.
+    Environment variable MPV2_HEADLESS=1 always overrides config.json,
+    so daemon.py and run_once.py can force headless without editing the file.
 
     Returns:
         headless (bool): The headless flag
     """
+    if os.environ.get("MPV2_HEADLESS", "") == "1":
+        return True
     cfg = _load_config()
-    return cfg["headless"]
+    return cfg.get("headless", False)
 
 def get_ollama_base_url() -> str:
     """
