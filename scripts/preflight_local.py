@@ -3,8 +3,13 @@ import json
 import os
 import sys
 from typing import Tuple
+from urllib import error as urlerror
+from urllib import request as urlrequest
 
-import requests
+try:
+    import requests
+except Exception:
+    requests = None
 
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -25,8 +30,16 @@ def fail(msg: str) -> None:
 
 def check_url(url: str, timeout: int = 3) -> Tuple[bool, str]:
     try:
-        response = requests.get(url, timeout=timeout)
-        return True, f"HTTP {response.status_code}"
+        if requests is not None:
+            response = requests.get(url, timeout=timeout)
+            return True, f"HTTP {response.status_code}"
+
+        req = urlrequest.Request(url, method="GET")
+        with urlrequest.urlopen(req, timeout=timeout) as response:
+            status = getattr(response, "status", 200)
+            return True, f"HTTP {status}"
+    except urlerror.HTTPError as exc:
+        return True, f"HTTP {exc.code}"
     except Exception as exc:
         return False, str(exc)
 
@@ -40,6 +53,13 @@ def main() -> int:
         cfg = json.load(f)
 
     failures = 0
+
+    if requests is None:
+        warn(
+            "Python package 'requests' is not installed for this interpreter. "
+            "Using urllib fallback for connectivity checks."
+        )
+        warn("Recommended fix: python3 -m pip install -r requirements.txt")
 
     current_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
     if not (sys.version_info.major == 3 and sys.version_info.minor == 12):
@@ -82,7 +102,11 @@ def main() -> int:
     else:
         ok(f"Ollama reachable at {base}")
         try:
-            tags = requests.get(f"{base}/api/tags", timeout=5).json()
+            if requests is not None:
+                tags = requests.get(f"{base}/api/tags", timeout=5).json()
+            else:
+                with urlrequest.urlopen(f"{base}/api/tags", timeout=5) as response:
+                    tags = json.loads(response.read().decode("utf-8"))
             models = [m.get("name") for m in tags.get("models", [])]
             if models:
                 ok(f"Ollama models available: {', '.join(models[:10])}")
