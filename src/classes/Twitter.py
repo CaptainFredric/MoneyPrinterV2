@@ -11,6 +11,7 @@ import platform
 from difflib import SequenceMatcher
 from uuid import uuid4
 import requests
+from urllib.parse import urlparse
 
 from cache import *
 from config import *
@@ -276,15 +277,22 @@ class Twitter:
 
         # Add the post to the cache
         post_urls = self._extract_urls(body)
+        post_category = self._infer_category_from_text(body)
+        citation_source = self._extract_citation_source(body)
+        angle_signature = self._extract_angle_signature(body, post_category)
         resolved_format = "media" if media_path and post_mode == "media" else ("link" if post_urls else "text")
         self.add_post(
             {
                 "content": body,
                 "date": now.strftime("%m/%d/%Y, %H:%M:%S"),
-                "category": self._infer_category_from_text(body),
+                "category": post_category,
                 "format": resolved_format,
+                "citation_source": citation_source,
+                "angle_signature": angle_signature,
             }
         )
+
+        self._record_angle_signature(angle_signature, post_category)
 
         success("Posted to Twitter successfully!")
         return "posted"
@@ -459,6 +467,277 @@ class Twitter:
             cleaned.append(link)
 
         return cleaned
+
+    def _extract_source_label_from_url(self, url: str) -> str:
+        """
+        Converts a URL into a short human-readable source label.
+
+        Args:
+            url (str): URL string
+
+        Returns:
+            label (str): Source label
+        """
+        try:
+            host = urlparse(url).netloc.lower()
+        except Exception:
+            return ""
+
+        host = host.replace("www.", "")
+        source_map = {
+            "jamesclear.com": "James Clear",
+            "todoist.com": "Todoist",
+            "atlassian.com": "Atlassian",
+            "zapier.com": "Zapier",
+            "calnewport.com": "Cal Newport",
+            "nationalgeographic.com": "National Geographic",
+            "scientificamerican.com": "Scientific American",
+            "britannica.com": "Britannica",
+            "smithsonianmag.com": "Smithsonian",
+            "livescience.com": "Live Science",
+        }
+
+        for domain, label in source_map.items():
+            if host.endswith(domain):
+                return label
+
+        base = host.split(".")[0]
+        if not base:
+            return ""
+        return base.replace("-", " ").title()
+
+    def _trusted_source_labels(self) -> list[str]:
+        """
+        Returns source labels derived from trusted links.
+
+        Returns:
+            labels (list[str]): Distinct source labels
+        """
+        labels: list[str] = []
+        for url in self._trusted_link_pool():
+            label = self._extract_source_label_from_url(url)
+            if label and label not in labels:
+                labels.append(label)
+        return labels
+
+    def _extract_citation_source(self, text: str) -> str:
+        """
+        Extracts a citation source from '(source: ...)' style suffix.
+
+        Args:
+            text (str): Tweet text
+
+        Returns:
+            source (str): Parsed source label or empty string
+        """
+        match = re.search(r"\(\s*source\s*:\s*([^\)]+)\)", text or "", flags=re.IGNORECASE)
+        if not match:
+            return ""
+        return match.group(1).strip()
+
+    def _target_citation_ratio(self) -> float:
+        """
+        Returns desired fraction of posts containing short source citations.
+
+        Account-level override: citation_post_ratio in .mp/twitter.json
+
+        Returns:
+            ratio (float): Clamped to [0.0, 0.6]
+        """
+        account = self._get_account_settings()
+        configured = account.get("citation_post_ratio")
+        if isinstance(configured, (int, float)):
+            return max(0.0, min(0.6, float(configured)))
+
+        topic = (self.topic or "").lower()
+        if any(key in topic for key in ("fact", "trivia", "weird", "wierd", "odd")):
+            return 0.25
+        return 0.12
+
+    def _recent_citation_sources(self, posts: List[dict], limit: int = 12) -> list[str]:
+        """
+        Collects citation sources from recent posts.
+
+        Args:
+            posts (List[dict]): Existing cached posts
+            limit (int): Number of recent posts to inspect
+
+        Returns:
+            sources (list[str]): Distinct recent source labels
+        """
+        sources: list[str] = []
+        for prev in posts[-limit:]:
+            source = str(prev.get("citation_source", "")).strip()
+            if not source:
+                source = self._extract_citation_source(prev.get("content", ""))
+            if source and source not in sources:
+                sources.append(source)
+        return sources
+
+    def _should_try_source_citation(self, posts: List[dict]) -> bool:
+        """
+        Decides whether to request a short '(source: ...)' suffix in this post.
+
+        Returns:
+            use_citation_mode (bool): Whether to include source citation guidance
+        """
+        source_labels = self._trusted_source_labels()
+        if not source_labels:
+            return False
+
+        recent = posts[-12:]
+        if not recent:
+            return random.random() < self._target_citation_ratio()
+
+        recent_with_citation = 0
+        for prev in recent:
+            if self._extract_citation_source(prev.get("content", "")):
+                recent_with_citation += 1
+
+        current_ratio = recent_with_citation / len(recent)
+        target_ratio = self._target_citation_ratio()
+
+        if current_ratio < target_ratio:
+            return random.random() < 0.70
+        return random.random() < 0.10
+
+    def _angle_memory_path(self) -> str:
+        """
+        Returns path to cross-run angle memory file.
+
+        Returns:
+            path (str): Absolute path to angle memory JSON
+        """
+        return os.path.join(ROOT_DIR, ".mp", "twitter_angle_memory.json")
+
+    def _load_angle_memory(self) -> dict:
+        """
+        Loads angle memory file.
+
+        Returns:
+            memory (dict): Parsed memory object
+        """
+        path = self._angle_memory_path()
+        if not os.path.exists(path):
+            return {"accounts": {}}
+
+        try:
+            with open(path, "r") as file:
+                parsed = json.load(file)
+            if isinstance(parsed, dict):
+                return parsed
+        except Exception:
+            pass
+        return {"accounts": {}}
+
+    def _save_angle_memory(self, memory: dict) -> None:
+        """
+        Saves angle memory atomically.
+
+        Args:
+            memory (dict): Memory object to persist
+        """
+        path = self._angle_memory_path()
+        tmp_path = path + ".tmp"
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(tmp_path, "w") as file:
+            json.dump(memory, file, indent=4)
+        os.replace(tmp_path, path)
+
+    def _extract_angle_signature(self, text: str, category: str = "") -> str:
+        """
+        Builds a compact angle signature from post opening + category.
+
+        Args:
+            text (str): Tweet text
+            category (str): Optional category label
+
+        Returns:
+            signature (str): Stable signature for repetition checks
+        """
+        normalized = self._normalize_tweet(text)
+        if not normalized:
+            return ""
+        lead = " ".join(normalized.split()[:6])
+        if category and category != "general":
+            return f"{category}:{lead}"
+        return lead
+
+    def _recent_angle_signatures(self, posts: List[dict], days: int = 45) -> list[str]:
+        """
+        Returns recent angle signatures from cache + memory file.
+
+        Args:
+            posts (List[dict]): Existing cached posts
+            days (int): Lookback window in days
+
+        Returns:
+            signatures (list[str]): Distinct angle signatures
+        """
+        signatures: list[str] = []
+
+        for prev in posts[-20:]:
+            signature = str(prev.get("angle_signature", "")).strip().lower()
+            if not signature:
+                category = str(prev.get("category", "")).strip().lower()
+                signature = self._extract_angle_signature(prev.get("content", ""), category)
+            if signature and signature not in signatures:
+                signatures.append(signature)
+
+        cutoff = datetime.now().timestamp() - (days * 86400)
+        memory = self._load_angle_memory()
+        entries = memory.get("accounts", {}).get(self.account_uuid, [])
+        for entry in entries:
+            try:
+                date_raw = entry.get("date", "")
+                date_ts = datetime.fromisoformat(date_raw).timestamp()
+                if date_ts < cutoff:
+                    continue
+            except Exception:
+                continue
+            signature = str(entry.get("angle", "")).strip().lower()
+            if signature and signature not in signatures:
+                signatures.append(signature)
+
+        return signatures
+
+    def _record_angle_signature(self, signature: str, category: str) -> None:
+        """
+        Persists angle signature to memory for long-horizon anti-repeat checks.
+
+        Args:
+            signature (str): Angle signature
+            category (str): Category label
+        """
+        if not signature:
+            return
+
+        memory = self._load_angle_memory()
+        accounts = memory.setdefault("accounts", {})
+        history = accounts.setdefault(self.account_uuid, [])
+
+        now_iso = datetime.now().isoformat(timespec="seconds")
+        history.append(
+            {
+                "date": now_iso,
+                "month": datetime.now().strftime("%Y-%m"),
+                "angle": signature,
+                "category": category,
+            }
+        )
+
+        # Keep recent window only, cap growth.
+        cutoff = datetime.now().timestamp() - (120 * 86400)
+        pruned = []
+        for entry in history[-200:]:
+            try:
+                if datetime.fromisoformat(entry.get("date", "")).timestamp() >= cutoff:
+                    pruned.append(entry)
+            except Exception:
+                continue
+        accounts[self.account_uuid] = pruned
+
+        self._save_angle_memory(memory)
 
     def _recent_urls(self, posts: List[dict], limit: int = 12) -> set[str]:
         """
@@ -1019,7 +1298,12 @@ class Twitter:
                 categories.append(category)
         return categories
 
-    def _build_prompt(self, existing_posts: list[dict], use_link_mode: bool = False) -> str:
+    def _build_prompt(
+        self,
+        existing_posts: list[dict],
+        use_link_mode: bool = False,
+        use_source_citation: bool = False,
+    ) -> str:
         """
         Builds a context-aware LLM prompt that steers the model away from
         recently used ideas and toward fresh angles.
@@ -1083,6 +1367,15 @@ class Twitter:
                 "  - Pick a different category than recent posts when possible.\n"
             )
 
+        recent_angles = self._recent_angle_signatures(existing_posts, days=45)
+        angle_block = ""
+        if recent_angles:
+            joined_angles = "\n".join(f"  - {sig}" for sig in recent_angles[:8])
+            angle_block = (
+                "\nLong-horizon angle memory (avoid reusing these recent angles):\n"
+                f"{joined_angles}\n"
+            )
+
         link_block = ""
         trusted_links = self._trusted_link_pool()
         if use_link_mode and trusted_links:
@@ -1103,6 +1396,20 @@ class Twitter:
                 "Do not include any URL in this tweet.\n"
             )
 
+        citation_block = ""
+        trusted_sources = self._trusted_source_labels()
+        if use_source_citation and trusted_sources:
+            recent_sources = self._recent_citation_sources(existing_posts, limit=12)
+            source_pool = [src for src in trusted_sources if src not in recent_sources] or trusted_sources
+            joined_sources = "\n".join(f"  - {src}" for src in source_pool[:6])
+            citation_block = (
+                "\nSource citation mode is ON:\n"
+                "  - Optionally append a short source note at the end in this exact style: (source: Name).\n"
+                "  - Use ONLY one approved source name below.\n"
+                "  - Keep citation brief and natural; no extra claims.\n"
+                f"{joined_sources}\n"
+            )
+
         return (
             f"You are a concise, engaging Twitter writer for the topic: '{self.topic}'.\n"
             f"Language: {get_twitter_language()}.\n"
@@ -1117,7 +1424,7 @@ class Twitter:
             "  7. Rotate sub-categories across posts instead of repeating the same lane.\n"
             "  8. No preamble, no labels, no hashtag spam (max 2 hashtags if used).\n"
             "  9. Return ONLY the raw tweet text."
-            f"{avoid_block}{opening_block}{hashtag_block}{cta_block}{category_block}{link_block}"
+            f"{avoid_block}{opening_block}{hashtag_block}{cta_block}{category_block}{angle_block}{link_block}{citation_block}"
         )
 
     def _generate_media_caption(self, existing_posts: List[dict]) -> str:
@@ -1154,7 +1461,11 @@ class Twitter:
             return ""
         return self._clean_tweet(completion)
 
-    def generate_post(self, force_link_mode: Optional[bool] = None) -> str:
+    def generate_post(
+        self,
+        force_link_mode: Optional[bool] = None,
+        force_source_citation: Optional[bool] = None,
+    ) -> str:
         """
         Generates a post for the Twitter account based on the topic.
         Uses context-aware prompting and retries up to 5 times.
@@ -1173,13 +1484,25 @@ class Twitter:
         recent_category_set = set(recent_categories)
         category_pool = self._topic_category_pool()
         trusted_links = self._trusted_link_pool()
+        trusted_sources = self._trusted_source_labels()
         recent_urls = self._recent_urls(existing_posts, limit=12)
+        recent_citation_sources = self._recent_citation_sources(existing_posts, limit=12)
+        recent_angles = set(self._recent_angle_signatures(existing_posts, days=45))
         use_link_mode = force_link_mode if force_link_mode is not None else self._should_try_link_post(existing_posts)
+        use_source_citation = (
+            force_source_citation
+            if force_source_citation is not None
+            else self._should_try_source_citation(existing_posts)
+        )
         rejection_reasons: list[str] = []
 
         for attempt in range(5):
             try:
-                prompt = self._build_prompt(existing_posts, use_link_mode=use_link_mode)
+                prompt = self._build_prompt(
+                    existing_posts,
+                    use_link_mode=use_link_mode,
+                    use_source_citation=use_source_citation,
+                )
                 completion = generate_text(prompt)
                 if not completion:
                     rejection_reasons.append(f"Attempt {attempt + 1}: empty response")
@@ -1255,6 +1578,28 @@ class Twitter:
                 )
                 continue
 
+            citation_source = self._extract_citation_source(cleaned)
+            if citation_source:
+                if trusted_sources and citation_source not in trusted_sources:
+                    rejection_reasons.append(
+                        f"Attempt {attempt + 1}: unapproved citation source '{citation_source}'"
+                    )
+                    continue
+
+                if (
+                    citation_source in recent_citation_sources
+                    and len(set(trusted_sources) - set(recent_citation_sources)) > 0
+                ):
+                    rejection_reasons.append(
+                        f"Attempt {attempt + 1}: citation source reused too soon"
+                    )
+                    continue
+            elif use_source_citation and trusted_sources and attempt < 3:
+                rejection_reasons.append(
+                    f"Attempt {attempt + 1}: citation mode expected '(source: ...)'."
+                )
+                continue
+
             if category_pool:
                 category = self._infer_category_from_text(cleaned)
                 can_rotate = len(set(category_pool) - recent_category_set) > 0
@@ -1263,6 +1608,16 @@ class Twitter:
                         f"Attempt {attempt + 1}: category '{category}' repeated too soon"
                     )
                     continue
+
+            angle_signature = self._extract_angle_signature(
+                cleaned,
+                self._infer_category_from_text(cleaned),
+            )
+            if angle_signature and angle_signature in recent_angles and attempt < 4:
+                rejection_reasons.append(
+                    f"Attempt {attempt + 1}: angle reused from monthly memory"
+                )
+                continue
 
             if get_verbose():
                 info(f"Tweet length: {len(cleaned)} chars")

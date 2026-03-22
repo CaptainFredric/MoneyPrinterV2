@@ -65,6 +65,8 @@ def print_account(acc: dict):
         print(f"Link Ratio    : {acc.get('link_post_ratio')}")
     if isinstance(acc.get("media_post_ratio"), (int, float)):
         print(f"Media Ratio   : {acc.get('media_post_ratio')}")
+    if isinstance(acc.get("citation_post_ratio"), (int, float)):
+        print(f"Citation Ratio: {acc.get('citation_post_ratio')}")
     trusted_links = acc.get("trusted_links") or acc.get("link_pool") or acc.get("source_links") or []
     if isinstance(trusted_links, list) and trusted_links:
         print(f"Trusted Links : {len(trusted_links)} configured")
@@ -74,6 +76,12 @@ def print_account(acc: dict):
         category = posts[-1].get("category", "")
         if category:
             print(f"Last Category : {category}")
+        citation_source = posts[-1].get("citation_source", "")
+        if citation_source:
+            print(f"Last Source   : {citation_source}")
+        angle_signature = posts[-1].get("angle_signature", "")
+        if angle_signature:
+            print(f"Last Angle    : {angle_signature}")
         preview = posts[-1].get("content", "").replace("\n", " ")[:120]
         print(f"Last Preview  : {preview}...")
     print("=" * 60)
