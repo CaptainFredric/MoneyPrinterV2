@@ -125,10 +125,12 @@ def build_report() -> dict:
         posts = acc.get("posts", [])
         last_dt = None
         last_content = ""
+        last_category = ""
         if posts:
             try:
                 last_dt = datetime.strptime(posts[-1]["date"], "%m/%d/%Y, %H:%M:%S")
                 last_content = posts[-1].get("content", "")[:80]
+                last_category = posts[-1].get("category", "")
             except (ValueError, KeyError):
                 pass
         report["twitter"].append({
@@ -139,6 +141,7 @@ def build_report() -> dict:
             "last_post_ago": _fmt_ago(last_dt) if last_dt else "never",
             "cooldown_status": _cooldown_remaining(last_dt) if last_dt else "✅ Ready to post",
             "last_content_preview": last_content,
+            "last_category": last_category,
         })
 
     # ── AFM ────────────────────────────────────────────────────────────────
@@ -173,6 +176,8 @@ def print_report(report: dict):
         print(f"  Posts    : {acc['post_count']}")
         print(f"  Last Post: {acc['last_post_ago']}")
         print(f"  Cooldown : {acc['cooldown_status']}")
+        if acc.get("last_category"):
+            print(f"  Category : {acc['last_category']}")
         if acc["last_content_preview"]:
             print(f"  Preview  : \"{acc['last_content_preview']}...\"")
         print()

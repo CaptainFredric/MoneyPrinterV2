@@ -221,7 +221,13 @@ class Twitter:
             time.sleep(2)  # Non-fatal fallback
 
         # Add the post to the cache
-        self.add_post({"content": body, "date": now.strftime("%m/%d/%Y, %H:%M:%S")})
+        self.add_post(
+            {
+                "content": body,
+                "date": now.strftime("%m/%d/%Y, %H:%M:%S"),
+                "category": self._infer_category_from_text(body),
+            }
+        )
 
         success("Posted to Twitter successfully!")
 
@@ -534,6 +540,117 @@ class Twitter:
                 signatures.add(signature)
         return signatures
 
+    def _topic_category_pool(self) -> list[str]:
+        """
+        Returns suggested categories for the current account topic.
+
+        Returns:
+            categories (list[str]): Ordered category labels
+        """
+        topic = (self.topic or "").lower()
+
+        if any(key in topic for key in ("fact", "trivia", "weird", "wierd", "odd")):
+            return [
+                "science",
+                "history",
+                "space",
+                "animals",
+                "human-body",
+                "language",
+                "technology",
+                "psychology",
+                "food",
+                "geography",
+            ]
+
+        if any(key in topic for key in ("productivity", "focus", "workflow", "tools")):
+            return [
+                "focus",
+                "time-management",
+                "planning",
+                "automation",
+                "task-management",
+                "habits",
+                "energy",
+                "collaboration",
+            ]
+
+        return []
+
+    def _infer_category_from_text(self, text: str) -> str:
+        """
+        Infers a coarse content category from tweet text.
+
+        Args:
+            text (str): Tweet content
+
+        Returns:
+            category (str): Lowercase category label
+        """
+        normalized = self._normalize_tweet(text)
+        if not normalized:
+            return "general"
+
+        tokens = set(normalized.split())
+        topic = (self.topic or "").lower()
+
+        if any(key in topic for key in ("fact", "trivia", "weird", "wierd", "odd")):
+            category_keywords = {
+                "science": {"science", "physics", "chemistry", "molecule", "atom", "lab"},
+                "history": {"history", "ancient", "empire", "war", "century", "roman"},
+                "space": {"space", "planet", "galaxy", "moon", "sun", "nasa", "orbit"},
+                "animals": {"animal", "animals", "bird", "cat", "dog", "whale", "shark"},
+                "human-body": {"brain", "heart", "body", "human", "muscle", "sleep", "eye"},
+                "language": {"word", "language", "letters", "english", "latin", "grammar"},
+                "technology": {"tech", "computer", "internet", "software", "ai", "robot"},
+                "psychology": {"mind", "memory", "habit", "emotion", "behavior", "bias"},
+                "food": {"food", "eat", "coffee", "chocolate", "salt", "sugar", "fruit"},
+                "geography": {"country", "city", "ocean", "river", "mountain", "desert"},
+            }
+        elif any(key in topic for key in ("productivity", "focus", "workflow", "tools")):
+            category_keywords = {
+                "focus": {"focus", "distraction", "deep", "attention", "concentrate"},
+                "time-management": {"time", "calendar", "schedule", "pomodoro", "deadline"},
+                "planning": {"plan", "weekly", "priority", "roadmap", "goal"},
+                "automation": {"automate", "automation", "script", "workflow", "system"},
+                "task-management": {"task", "todo", "kanban", "trello", "asana", "notion"},
+                "habits": {"habit", "routine", "consistency", "daily", "streak"},
+                "energy": {"energy", "sleep", "break", "rest", "burnout"},
+                "collaboration": {"team", "collaboration", "meeting", "async", "delegate"},
+            }
+        else:
+            category_keywords = {}
+
+        best_category = "general"
+        best_score = 0
+        for category, words in category_keywords.items():
+            score = len(tokens & words)
+            if score > best_score:
+                best_score = score
+                best_category = category
+
+        return best_category
+
+    def _recent_categories(self, posts: List[dict], limit: int = 10) -> list[str]:
+        """
+        Returns ordered, unique categories from recent posts.
+
+        Args:
+            posts (List[dict]): Existing cached posts
+            limit (int): Number of recent posts to inspect
+
+        Returns:
+            categories (list[str]): Recent categories, newest order preserved
+        """
+        categories: list[str] = []
+        for prev in posts[-limit:]:
+            category = str(prev.get("category", "")).strip().lower()
+            if not category:
+                category = self._infer_category_from_text(prev.get("content", ""))
+            if category and category not in categories:
+                categories.append(category)
+        return categories
+
     def _build_prompt(self, existing_posts: list[dict]) -> str:
         """
         Builds a context-aware LLM prompt that steers the model away from
@@ -585,6 +702,19 @@ class Twitter:
                 f"{joined_ctas}\n"
             )
 
+        category_pool = self._topic_category_pool()
+        recent_categories = self._recent_categories(existing_posts, limit=8)
+        category_block = ""
+        if category_pool:
+            category_list = ", ".join(category_pool)
+            recent_list = ", ".join(recent_categories[:4]) if recent_categories else "none"
+            category_block = (
+                "\nCategory rotation:\n"
+                f"  - Allowed categories: {category_list}\n"
+                f"  - Recently used categories: {recent_list}\n"
+                "  - Pick a different category than recent posts when possible.\n"
+            )
+
         return (
             f"You are a concise, engaging Twitter writer for the topic: '{self.topic}'.\n"
             f"Language: {get_twitter_language()}.\n"
@@ -596,9 +726,10 @@ class Twitter:
             "  4. Use a different opening pattern than recent posts (vary lead-in wording and structure).\n"
             "  5. If you use hashtags, prefer fresh ones not recently used. Max 2 hashtags.\n"
             "  6. Vary CTA endings when present (do not keep ending with the same ask).\n"
-            "  7. No preamble, no labels, no hashtag spam (max 2 hashtags if used).\n"
-            "  8. Return ONLY the raw tweet text."
-            f"{avoid_block}{opening_block}{hashtag_block}{cta_block}"
+            "  7. Rotate sub-categories across posts instead of repeating the same lane.\n"
+            "  8. No preamble, no labels, no hashtag spam (max 2 hashtags if used).\n"
+            "  9. Return ONLY the raw tweet text."
+            f"{avoid_block}{opening_block}{hashtag_block}{cta_block}{category_block}"
         )
 
     def generate_post(self) -> str:
@@ -616,6 +747,9 @@ class Twitter:
         recent_openings = set(self._recent_opening_signatures(existing_posts))
         recent_hashtags = self._recent_hashtags(existing_posts)
         recent_cta_signatures = self._recent_cta_signatures(existing_posts)
+        recent_categories = self._recent_categories(existing_posts, limit=6)
+        recent_category_set = set(recent_categories)
+        category_pool = self._topic_category_pool()
         rejection_reasons: list[str] = []
 
         for attempt in range(5):
@@ -670,6 +804,15 @@ class Twitter:
                     f"Attempt {attempt + 1}: CTA ending too repetitive"
                 )
                 continue
+
+            if category_pool:
+                category = self._infer_category_from_text(cleaned)
+                can_rotate = len(set(category_pool) - recent_category_set) > 0
+                if attempt < 4 and can_rotate and category in recent_category_set:
+                    rejection_reasons.append(
+                        f"Attempt {attempt + 1}: category '{category}' repeated too soon"
+                    )
+                    continue
 
             if get_verbose():
                 info(f"Tweet length: {len(cleaned)} chars")
