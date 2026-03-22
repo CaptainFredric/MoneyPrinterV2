@@ -23,3 +23,9 @@
 ✅ Done posting.
 2026-03-22 13:01:48,173 [INFO] ✅ Job completed: twitter/niche_launch_1
 2026-03-22 13:17:32,924 [INFO] Received signal 15 — shutting down after current tick.
+2026-03-22 15:44:43,215 [INFO] ============================================================
+2026-03-22 15:44:43,215 [INFO] MoneyPrinterV2 Daemon starting up
+2026-03-22 15:44:43,215 [INFO] Root:      /Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2
+2026-03-22 15:44:43,216 [INFO] Headless:  False
+2026-03-22 15:44:43,216 [INFO] Dry-run:   False
+2026-03-22 15:44:43,216 [INFO] ============================================================

@@ -19,3 +19,19 @@
 2026-03-22 13:00:11,207 [INFO] ▶  Starting job: twitter/niche_launch_1
 2026-03-22 13:01:48,173 [INFO] ✅ Job completed: twitter/niche_launch_1
 2026-03-22 13:17:32,924 [INFO] Received signal 15 — shutting down after current tick.
+2026-03-22 15:44:42,719 [INFO] ============================================================
+2026-03-22 15:44:42,720 [INFO] MoneyPrinterV2 Daemon starting up
+2026-03-22 15:44:42,720 [INFO] Root:      /Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2
+2026-03-22 15:44:42,720 [INFO] Headless:  False
+2026-03-22 15:44:42,720 [INFO] Dry-run:   True
+2026-03-22 15:44:42,720 [INFO] ============================================================
+2026-03-22 15:44:42,720 [INFO] Dry-run complete. Scheduled times:
+2026-03-22 15:44:42,720 [INFO]   twitter / niche_launch_1 @ ['09:00', '13:00', '19:00']
+2026-03-22 15:44:42,720 [INFO]   twitter / EyeCatcher @ ['10:00', '16:00', '21:00']
+2026-03-22 15:44:42,720 [INFO] Daemon stopped.
+2026-03-22 15:44:43,215 [INFO] ============================================================
+2026-03-22 15:44:43,215 [INFO] MoneyPrinterV2 Daemon starting up
+2026-03-22 15:44:43,215 [INFO] Root:      /Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2
+2026-03-22 15:44:43,216 [INFO] Headless:  False
+2026-03-22 15:44:43,216 [INFO] Dry-run:   False
+2026-03-22 15:44:43,216 [INFO] ============================================================
