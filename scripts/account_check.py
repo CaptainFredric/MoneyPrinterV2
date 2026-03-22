@@ -61,6 +61,10 @@ def print_account(acc: dict):
         print(f"Avatar Idea   : {acc.get('avatar_idea')}")
     if acc.get("banner_idea"):
         print(f"Banner Idea   : {acc.get('banner_idea')}")
+    if isinstance(acc.get("link_post_ratio"), (int, float)):
+        print(f"Link Ratio    : {acc.get('link_post_ratio')}")
+    if isinstance(acc.get("media_post_ratio"), (int, float)):
+        print(f"Media Ratio   : {acc.get('media_post_ratio')}")
     trusted_links = acc.get("trusted_links") or acc.get("link_pool") or acc.get("source_links") or []
     if isinstance(trusted_links, list) and trusted_links:
         print(f"Trusted Links : {len(trusted_links)} configured")

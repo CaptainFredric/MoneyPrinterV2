@@ -3,11 +3,14 @@ import sys
 import time
 import random
 import os
+import base64
 import json
 import shutil
 import tempfile
 import platform
 from difflib import SequenceMatcher
+from uuid import uuid4
+import requests
 
 from cache import *
 from config import *
@@ -139,12 +142,39 @@ class Twitter:
         bot: webdriver.Firefox = self.browser
         verbose: bool = get_verbose()
 
-        post_content: str = text if text is not None else self.generate_post()
+        existing_posts = self.get_posts()
+        post_mode = "text"
+        media_path: Optional[str] = None
+
+        if text is not None:
+            post_content = text
+        else:
+            post_mode = self._select_post_mode(existing_posts)
+            if verbose:
+                info(f"Selected post mode: {post_mode}")
+
+            if post_mode == "media":
+                media_prompt = self._build_media_prompt(existing_posts)
+                media_path = self._generate_media_image(media_prompt)
+                if media_path:
+                    caption = self._generate_media_caption(existing_posts)
+                    if caption:
+                        post_content = caption
+                    else:
+                        post_content = self.generate_post(force_link_mode=False)
+                else:
+                    warning("Media generation unavailable — falling back to text/link mode.")
+                    post_mode = "text"
+                    post_content = self.generate_post(force_link_mode=None)
+            elif post_mode == "link":
+                post_content = self.generate_post(force_link_mode=True)
+            else:
+                post_content = self.generate_post(force_link_mode=False)
+
         post_content = self._clean_tweet(post_content)
         now: datetime = datetime.now()
 
         # Deduplication guard: skip if recent content is identical or too similar
-        existing_posts = self.get_posts()
         if self._is_too_similar_to_recent(post_content, existing_posts):
             warning("Post is too similar to recent content — skipping to avoid spam.")
             return "skipped:similarity"
@@ -192,6 +222,27 @@ class Twitter:
                 "Could not find tweet text box. Ensure you are logged into X in this Firefox profile."
             )
 
+        if media_path:
+            file_input = None
+            file_input_selectors = [
+                (By.CSS_SELECTOR, "input[data-testid='fileInput']"),
+                (By.CSS_SELECTOR, "input[type='file'][accept*='image']"),
+                (By.CSS_SELECTOR, "input[type='file']"),
+            ]
+            for selector in file_input_selectors:
+                try:
+                    file_input = self.wait.until(EC.presence_of_element_located(selector))
+                    file_input.send_keys(media_path)
+                    # Give X a short moment to bind/upload attachment client-side.
+                    time.sleep(2)
+                    break
+                except Exception:
+                    continue
+
+            if file_input is None:
+                warning("Could not attach media file — posting as text instead.")
+                post_mode = "text"
+
         post_button = None
         post_button_selectors = [
             (By.XPATH, "//button[@data-testid='tweetButtonInline']"),
@@ -225,12 +276,13 @@ class Twitter:
 
         # Add the post to the cache
         post_urls = self._extract_urls(body)
+        resolved_format = "media" if media_path and post_mode == "media" else ("link" if post_urls else "text")
         self.add_post(
             {
                 "content": body,
                 "date": now.strftime("%m/%d/%Y, %H:%M:%S"),
                 "category": self._infer_category_from_text(body),
-                "format": "link" if post_urls else "text",
+                "format": resolved_format,
             }
         )
 
@@ -445,6 +497,186 @@ class Twitter:
         if any(key in topic for key in ("fact", "trivia", "weird", "wierd")):
             return 0.15
         return 0.20
+
+    def _target_media_ratio(self) -> float:
+        """
+        Returns desired fraction of media posts.
+
+        Account-level override: media_post_ratio in .mp/twitter.json
+
+        Returns:
+            ratio (float): Clamped to [0.0, 0.7]
+        """
+        account = self._get_account_settings()
+        configured = account.get("media_post_ratio")
+        if isinstance(configured, (int, float)):
+            return max(0.0, min(0.7, float(configured)))
+
+        topic = (self.topic or "").lower()
+        if any(key in topic for key in ("fact", "trivia", "weird", "wierd")):
+            return 0.20
+        if any(key in topic for key in ("productivity", "tools", "workflow")):
+            return 0.12
+        return 0.10
+
+    def _recent_formats(self, posts: List[dict], limit: int = 12) -> list[str]:
+        """
+        Returns recent post formats, inferring legacy entries when needed.
+
+        Args:
+            posts (List[dict]): Existing cached posts
+            limit (int): Number of recent posts to inspect
+
+        Returns:
+            formats (list[str]): Recent formats (text/link/media)
+        """
+        formats: list[str] = []
+        for prev in posts[-limit:]:
+            fmt = str(prev.get("format", "")).strip().lower()
+            if fmt in ("text", "link", "media"):
+                formats.append(fmt)
+                continue
+
+            content = prev.get("content", "")
+            if self._extract_urls(content):
+                formats.append("link")
+            else:
+                formats.append("text")
+        return formats
+
+    def _has_image_generation_support(self) -> bool:
+        """
+        Checks whether image generation is configured.
+
+        Returns:
+            available (bool): True when an API key is configured
+        """
+        return bool(get_nanobanana2_api_key())
+
+    def _should_try_media_post(self, posts: List[dict]) -> bool:
+        """
+        Decides whether this run should attempt media mode.
+
+        Returns:
+            use_media_mode (bool): Whether to generate/upload an image
+        """
+        if not self._has_image_generation_support():
+            return False
+
+        recent_formats = self._recent_formats(posts, limit=12)
+        if not recent_formats:
+            return random.random() < self._target_media_ratio()
+
+        media_count = sum(1 for fmt in recent_formats if fmt == "media")
+        current_ratio = media_count / len(recent_formats)
+        target_ratio = self._target_media_ratio()
+
+        # Avoid back-to-back media posts by default.
+        if recent_formats and recent_formats[-1] == "media":
+            return False
+
+        if current_ratio < target_ratio:
+            return random.random() < 0.70
+        return random.random() < 0.08
+
+    def _select_post_mode(self, posts: List[dict]) -> str:
+        """
+        Selects post mode for this run: media, link, or text.
+
+        Returns:
+            mode (str): One of media|link|text
+        """
+        if self._should_try_media_post(posts):
+            return "media"
+        if self._should_try_link_post(posts):
+            return "link"
+        return "text"
+
+    def _build_media_prompt(self, existing_posts: List[dict]) -> str:
+        """
+        Builds a concise image prompt for social media visual generation.
+
+        Args:
+            existing_posts (List[dict]): Existing posts for anti-repeat context
+
+        Returns:
+            prompt (str): Image model prompt
+        """
+        account = self._get_account_settings()
+        style_hint = str(account.get("image_style_prompt", "")).strip()
+        branding_hint = str(account.get("banner_idea") or account.get("avatar_idea") or "").strip()
+        recent_topics = "\n".join(
+            f"- {p.get('content', '')[:70].strip()}"
+            for p in existing_posts[-5:]
+            if p.get("content")
+        )
+
+        return (
+            f"Create a striking social image concept for a Twitter post about: {self.topic}.\n"
+            "Output one concise image description only (no bullets, no labels).\n"
+            "Keep it realistic, high-contrast, modern, and eye-catching.\n"
+            "Aspect ratio portrait-friendly (4:5). Avoid text overlays and logos.\n"
+            f"Branding cues: {branding_hint or 'clean modern visual style'}.\n"
+            f"Style preference: {style_hint or 'bold lighting, cinematic details, vivid but believable colors'}.\n"
+            "Avoid repeating visual ideas implied by recent post topics:\n"
+            f"{recent_topics or '- none'}"
+        )
+
+    def _generate_media_image(self, prompt: str) -> Optional[str]:
+        """
+        Generates one media image via Nano Banana 2 and stores it in .mp.
+
+        Args:
+            prompt (str): Image generation prompt
+
+        Returns:
+            image_path (Optional[str]): Absolute path to PNG image or None
+        """
+        api_key = get_nanobanana2_api_key()
+        if not api_key:
+            return None
+
+        base_url = get_nanobanana2_api_base_url().rstrip("/")
+        model = get_nanobanana2_model()
+        endpoint = f"{base_url}/models/{model}:generateContent"
+
+        payload = {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {
+                "responseModalities": ["IMAGE"],
+                "imageConfig": {"aspectRatio": "4:5"},
+            },
+        }
+
+        try:
+            response = requests.post(
+                endpoint,
+                headers={"x-goog-api-key": api_key, "Content-Type": "application/json"},
+                json=payload,
+                timeout=300,
+            )
+            response.raise_for_status()
+            body = response.json()
+
+            for candidate in body.get("candidates", []):
+                content = candidate.get("content", {})
+                for part in content.get("parts", []):
+                    inline_data = part.get("inlineData") or part.get("inline_data")
+                    if not inline_data:
+                        continue
+                    data = inline_data.get("data")
+                    mime_type = inline_data.get("mimeType") or inline_data.get("mime_type", "")
+                    if data and str(mime_type).startswith("image/"):
+                        image_bytes = base64.b64decode(data)
+                        path = os.path.join(ROOT_DIR, ".mp", f"{uuid4()}.png")
+                        with open(path, "wb") as image_file:
+                            image_file.write(image_bytes)
+                        return path
+        except Exception as exc:
+            if get_verbose():
+                warning(f"Media image generation failed: {exc}")
+
+        return None
 
     def _should_try_link_post(self, posts: List[dict]) -> bool:
         """
@@ -888,7 +1120,41 @@ class Twitter:
             f"{avoid_block}{opening_block}{hashtag_block}{cta_block}{category_block}{link_block}"
         )
 
-    def generate_post(self) -> str:
+    def _generate_media_caption(self, existing_posts: List[dict]) -> str:
+        """
+        Generates a caption designed for an accompanying image post.
+
+        Args:
+            existing_posts (List[dict]): Existing posts for anti-repeat context
+
+        Returns:
+            caption (str): Tweet caption text
+        """
+        recent_snippets = "\n".join(
+            f"- {p.get('content', '')[:80].strip()}"
+            for p in existing_posts[-6:]
+            if p.get("content")
+        )
+
+        prompt = (
+            f"Write one X/Twitter caption for topic '{self.topic}' in {get_twitter_language()}.\n"
+            "Context: this caption will be paired with an image, so make it punchy and concise.\n"
+            "Rules:\n"
+            "- Max 2 short sentences, under 220 characters.\n"
+            "- Strong hook in sentence 1.\n"
+            "- No URL.\n"
+            "- Max 2 hashtags.\n"
+            "- Return only the caption text.\n"
+            "Avoid repeating these recent posts:\n"
+            f"{recent_snippets or '- none'}"
+        )
+
+        completion = generate_text(prompt)
+        if not completion:
+            return ""
+        return self._clean_tweet(completion)
+
+    def generate_post(self, force_link_mode: Optional[bool] = None) -> str:
         """
         Generates a post for the Twitter account based on the topic.
         Uses context-aware prompting and retries up to 5 times.
@@ -908,7 +1174,7 @@ class Twitter:
         category_pool = self._topic_category_pool()
         trusted_links = self._trusted_link_pool()
         recent_urls = self._recent_urls(existing_posts, limit=12)
-        use_link_mode = self._should_try_link_post(existing_posts)
+        use_link_mode = force_link_mode if force_link_mode is not None else self._should_try_link_post(existing_posts)
         rejection_reasons: list[str] = []
 
         for attempt in range(5):

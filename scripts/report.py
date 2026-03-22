@@ -95,8 +95,10 @@ def _quality_snapshot(posts: list[dict]) -> dict:
             "avg_length": 0,
             "hook_rate": 0.0,
             "link_ratio": 0.0,
+            "media_ratio": 0.0,
             "avg_hashtags": 0.0,
             "category_diversity": 0.0,
+            "mode_diversity": 0.0,
             "recommendations": ["Post more samples before quality analysis."],
         }
 
@@ -106,7 +108,18 @@ def _quality_snapshot(posts: list[dict]) -> dict:
     lengths = [len(p.get("content", "")) for p in sample]
     hooks = sum(1 for p in sample if _has_hook(p.get("content", "")))
     links = sum(1 for p in sample if _extract_urls(p.get("content", "")))
+    media = sum(1 for p in sample if str(p.get("format", "")).strip().lower() == "media")
     hashtags = [len(_extract_hashtags(p.get("content", ""))) for p in sample]
+
+    modes = []
+    for p in sample:
+        fmt = str(p.get("format", "")).strip().lower()
+        if fmt in ("text", "link", "media"):
+            modes.append(fmt)
+        elif _extract_urls(p.get("content", "")):
+            modes.append("link")
+        else:
+            modes.append("text")
 
     categories = []
     for p in sample:
@@ -121,8 +134,10 @@ def _quality_snapshot(posts: list[dict]) -> dict:
         "avg_length": int(sum(lengths) / total),
         "hook_rate": hooks / total,
         "link_ratio": links / total,
+        "media_ratio": media / total,
         "avg_hashtags": round(sum(hashtags) / total, 2),
         "category_diversity": round(category_diversity, 2),
+        "mode_diversity": round(len(set(modes)) / 3, 2),
         "recommendations": [],
     }
 
@@ -137,8 +152,14 @@ def _quality_snapshot(posts: list[dict]) -> dict:
         recs.append("Add occasional trusted links (about 10-30%) for authority.")
     elif quality["link_ratio"] > 0.45:
         recs.append("Use fewer links; too many can hurt engagement.")
+    if quality["media_ratio"] < 0.08:
+        recs.append("Add occasional media posts (about 10-20%) for higher visual reach.")
+    elif quality["media_ratio"] > 0.40:
+        recs.append("Reduce media frequency; keep room for fast text/link cadence.")
     if quality["category_diversity"] < 0.25:
         recs.append("Rotate post categories more (avoid repeating the same lane).")
+    if quality["mode_diversity"] < 0.67:
+        recs.append("Diversify post modes across text, link, and media.")
 
     if not recs:
         recs.append("Quality mix looks healthy. Keep rotating hooks, categories, and formats.")
@@ -277,9 +298,11 @@ def print_report(report: dict):
                 "  Quality  : "
                 f"hooks={int(quality.get('hook_rate', 0.0) * 100)}% | "
                 f"links={int(quality.get('link_ratio', 0.0) * 100)}% | "
+                f"media={int(quality.get('media_ratio', 0.0) * 100)}% | "
                 f"avg_len={quality.get('avg_length', 0)} | "
                 f"avg_tags={quality.get('avg_hashtags', 0)} | "
-                f"cat_div={quality.get('category_diversity', 0)}"
+                f"cat_div={quality.get('category_diversity', 0)} | "
+                f"mode_div={quality.get('mode_diversity', 0)}"
             )
             top_reco = (quality.get("recommendations") or [""])[0]
             if top_reco:
