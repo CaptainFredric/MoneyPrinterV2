@@ -7,12 +7,12 @@ cd "$ROOT_DIR"
 echo "[setup] Root: $ROOT_DIR"
 
 PYTHON_BOOTSTRAP=""
-for candidate in python3.14 python3.13 python3.12 python3; do
+for candidate in python3.12 python3; do
     if command -v "$candidate" >/dev/null 2>&1; then
         version="$($candidate -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
         major="${version%%.*}"
         minor="${version##*.}"
-        if [[ "$major" -gt 3 || ( "$major" -eq 3 && "$minor" -ge 12 ) ]]; then
+        if [[ "$major" -eq 3 && "$minor" -eq 12 ]]; then
             PYTHON_BOOTSTRAP="$(command -v "$candidate")"
             break
         fi
@@ -20,8 +20,8 @@ for candidate in python3.14 python3.13 python3.12 python3; do
 done
 
 if [[ -z "$PYTHON_BOOTSTRAP" ]]; then
-    echo "[setup] Python 3.12+ is required but no compatible interpreter was found on PATH."
-    echo "[setup] Install Python 3.12 or newer, then rerun this script."
+    echo "[setup] Python 3.12.x is required but no compatible interpreter was found on PATH."
+    echo "[setup] Install Python 3.12 and rerun this script."
     exit 1
 fi
 
