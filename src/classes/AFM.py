@@ -1,5 +1,7 @@
 import os
 import platform
+import shutil
+import tempfile
 from urllib.parse import urlparse
 from typing import Any
 
@@ -9,9 +11,12 @@ from constants import *
 from llm_provider import generate_text
 from .Twitter import Twitter
 from selenium import webdriver
+from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.firefox import GeckoDriverManager
 
 
@@ -59,6 +64,15 @@ class AffiliateMarketing:
                 f"Firefox profile path does not exist or is not a directory: {fp_profile_path}"
             )
 
+        # Remove stale lock files before launch
+        for lock_file_name in [".parentlock", "parent.lock", "lock"]:
+            lock_file_path = os.path.join(fp_profile_path, lock_file_name)
+            if os.path.exists(lock_file_path):
+                try:
+                    os.remove(lock_file_path)
+                except OSError:
+                    pass
+
         # Set the profile path
         self.options.add_argument("-profile")
         self.options.add_argument(fp_profile_path)
@@ -66,10 +80,32 @@ class AffiliateMarketing:
         # Set the service
         self.service: Service = Service(GeckoDriverManager().install())
 
-        # Initialize the browser
-        self.browser: webdriver.Firefox = webdriver.Firefox(
-            service=self.service, options=self.options
-        )
+        # Initialize the browser — with fallback clone on WebDriverException
+        try:
+            self.browser: webdriver.Firefox = webdriver.Firefox(
+                service=self.service, options=self.options
+            )
+        except WebDriverException:
+            fallback_profile_path = tempfile.mkdtemp(prefix="mpv2_afm_ff_profile_")
+            shutil.copytree(fp_profile_path, fallback_profile_path, dirs_exist_ok=True)
+            for lock_file_name in [".parentlock", "parent.lock", "lock"]:
+                lock_file_path = os.path.join(fallback_profile_path, lock_file_name)
+                if os.path.exists(lock_file_path):
+                    try:
+                        os.remove(lock_file_path)
+                    except OSError:
+                        pass
+            fallback_options: Options = Options()
+            if platform.system() == "Darwin" and os.path.exists(firefox_app_binary):
+                fallback_options.binary_location = firefox_app_binary
+            if get_headless():
+                fallback_options.add_argument("--headless")
+            fallback_options.add_argument("-profile")
+            fallback_options.add_argument(fallback_profile_path)
+            self.options = fallback_options
+            self.browser = webdriver.Firefox(service=self.service, options=self.options)
+
+        self.wait: WebDriverWait = WebDriverWait(self.browser, 30)
 
         # Set the affiliate link
         self.affiliate_link: str = affiliate_link
@@ -100,19 +136,43 @@ class AffiliateMarketing:
         # Open the affiliate link
         self.browser.get(self.affiliate_link)
 
-        # Get the product name
-        product_title: str = self.browser.find_element(
-            By.ID, AMAZON_PRODUCT_TITLE_ID
-        ).text
+        # Wait for page load — try title element; fall back to page title
+        product_title: str = ""
+        try:
+            title_el = self.wait.until(
+                EC.presence_of_element_located((By.ID, AMAZON_PRODUCT_TITLE_ID))
+            )
+            product_title = title_el.text.strip()
+        except Exception:
+            # Generic fallback: use <title> tag text
+            try:
+                product_title = self.browser.title.strip()
+            except Exception:
+                product_title = "Unknown Product"
 
-        # Get the features of the product
-        features: Any = self.browser.find_elements(By.ID, AMAZON_FEATURE_BULLETS_ID)
+        # Get the features of the product — non-fatal if missing
+        features: Any = []
+        try:
+            features = self.browser.find_elements(By.ID, AMAZON_FEATURE_BULLETS_ID)
+            if not features:
+                # Try alternate CSS selector used on some locales
+                features = self.browser.find_elements(
+                    By.CSS_SELECTOR, "#feature-bullets li span.a-list-item"
+                )
+        except Exception:
+            pass
 
         if get_verbose():
             info(f"Product Title: {product_title}")
 
         if get_verbose():
             info(f"Features: {features}")
+
+        if not product_title:
+            raise RuntimeError(
+                "Could not scrape product title from the affiliate link. "
+                "Check the URL and ensure the browser is not blocked by CAPTCHA."
+            )
 
         # Set the product title
         self.product_title: str = product_title
