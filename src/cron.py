@@ -60,7 +60,8 @@ def main():
             matched_acc["topic"]
         )
         try:
-            twitter.post()
+            post_status = twitter.post()
+            print(f"MPV2_POST_STATUS:{post_status}")
         except Exception as exc:
             error(f"Twitter post failed: {exc}")
             sys.exit(1)

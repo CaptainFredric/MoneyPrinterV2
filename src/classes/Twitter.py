@@ -110,7 +110,7 @@ class Twitter:
 
         self.wait: WebDriverWait = WebDriverWait(self.browser, 30)
 
-    def post(self, text: Optional[str] = None) -> None:
+    def post(self, text: Optional[str] = None) -> str:
         """
         Posts a tweet, then quits the browser.
         Always closes the browser window — even on error.
@@ -119,17 +119,19 @@ class Twitter:
             text (str): The text to post
 
         Returns:
-            None
+            status (str): 'posted' or 'skipped:<reason>'
         """
+        status = "skipped:unknown"
         try:
-            self._do_post(text)
+            status = self._do_post(text)
         finally:
             try:
                 self.browser.quit()
             except Exception:
                 pass
+        return status
 
-    def _do_post(self, text: Optional[str] = None) -> None:
+    def _do_post(self, text: Optional[str] = None) -> str:
         """
         Internal post implementation — browser lifecycle managed by post().
         """
@@ -144,7 +146,7 @@ class Twitter:
         existing_posts = self.get_posts()
         if self._is_too_similar_to_recent(post_content, existing_posts):
             warning("Post is too similar to recent content — skipping to avoid spam.")
-            return
+            return "skipped:similarity"
 
         # Cooldown guard: enforce minimum gap between posts (default 30 min)
         if existing_posts:
@@ -159,7 +161,7 @@ class Twitter:
                         f"Post cooldown active — last post was {int(elapsed / 60)}m ago. "
                         f"Wait {remaining}m more to avoid spam flags."
                     )
-                    return
+                    return "skipped:cooldown"
             except (ValueError, KeyError):
                 pass  # Malformed date entry — allow post
 
@@ -230,6 +232,7 @@ class Twitter:
         )
 
         success("Posted to Twitter successfully!")
+        return "posted"
 
     def get_posts(self) -> List[dict]:
         """
@@ -600,10 +603,10 @@ class Twitter:
                 "history": {"history", "ancient", "empire", "war", "century", "roman"},
                 "space": {"space", "planet", "galaxy", "moon", "sun", "nasa", "orbit"},
                 "animals": {"animal", "animals", "bird", "cat", "dog", "whale", "shark"},
-                "human-body": {"brain", "heart", "body", "human", "muscle", "sleep", "eye"},
+                "human-body": {"brain", "heart", "body", "human", "muscle", "sleep", "eye", "dream", "dreams", "neuro", "neural"},
                 "language": {"word", "language", "letters", "english", "latin", "grammar"},
                 "technology": {"tech", "computer", "internet", "software", "ai", "robot"},
-                "psychology": {"mind", "memory", "habit", "emotion", "behavior", "bias"},
+                "psychology": {"mind", "memory", "habit", "emotion", "behavior", "bias", "dream", "dreams", "perception", "cognition"},
                 "food": {"food", "eat", "coffee", "chocolate", "salt", "sugar", "fruit"},
                 "geography": {"country", "city", "ocean", "river", "mountain", "desert"},
             }
