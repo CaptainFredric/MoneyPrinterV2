@@ -9,3 +9,4 @@ niche.txt
 *.exe
 auto.sh
 .DS_Store
+secrets/twitter_automation_profile*/
