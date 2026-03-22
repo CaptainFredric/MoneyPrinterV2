@@ -419,6 +419,41 @@ class Twitter:
         lowered = hook_text.lower()
         return lowered.startswith(strong_starts)
 
+    def _opening_signature(self, text: str) -> str:
+        """
+        Returns a compact signature of the tweet opening for repetition checks.
+
+        Args:
+            text (str): Tweet text
+
+        Returns:
+            signature (str): First few normalized words of the opening
+        """
+        first_line = text.splitlines()[0].strip() if text else ""
+        first_sentence = re.split(r"(?<=[.!?])\s+", first_line, maxsplit=1)[0].strip()
+        normalized = self._normalize_tweet(first_sentence)
+        if not normalized:
+            return ""
+        return " ".join(normalized.split()[:4])
+
+    def _recent_opening_signatures(self, posts: List[dict], limit: int = 8) -> list[str]:
+        """
+        Collects unique opening signatures from recent posts.
+
+        Args:
+            posts (List[dict]): Existing cached posts
+            limit (int): Number of recent posts to inspect
+
+        Returns:
+            signatures (list[str]): Unique opening signatures
+        """
+        signatures: list[str] = []
+        for prev in posts[-limit:]:
+            signature = self._opening_signature(prev.get("content", ""))
+            if signature and signature not in signatures:
+                signatures.append(signature)
+        return signatures
+
     def _build_prompt(self, existing_posts: list[dict]) -> str:
         """
         Builds a context-aware LLM prompt that steers the model away from
@@ -443,6 +478,15 @@ class Twitter:
                 f"\n\nRecently posted (DO NOT repeat these ideas, angles, or examples):\n{joined}\n"
             )
 
+        opening_signatures = self._recent_opening_signatures(existing_posts)
+        opening_block = ""
+        if opening_signatures:
+            joined_openings = "\n".join(f"  - {sig}" for sig in opening_signatures[:6])
+            opening_block = (
+                "\nRecent opening patterns to avoid reusing:\n"
+                f"{joined_openings}\n"
+            )
+
         return (
             f"You are a concise, engaging Twitter writer for the topic: '{self.topic}'.\n"
             f"Language: {get_twitter_language()}.\n"
@@ -451,9 +495,10 @@ class Twitter:
             "  1. Open with a strong hook: a question, surprising fact, bold claim, or specific actionable tip.\n"
             "  2. Choose a SPECIFIC sub-angle — avoid generic advice.\n"
             "  3. Do NOT repeat any idea, phrasing, tool name, or example from the recent posts listed below.\n"
-            "  4. No preamble, no labels, no hashtag spam (max 2 hashtags if used).\n"
-            "  5. Return ONLY the raw tweet text."
-            f"{avoid_block}"
+            "  4. Use a different opening pattern than recent posts (vary lead-in wording and structure).\n"
+            "  5. No preamble, no labels, no hashtag spam (max 2 hashtags if used).\n"
+            "  6. Return ONLY the raw tweet text."
+            f"{avoid_block}{opening_block}"
         )
 
     def generate_post(self) -> str:
@@ -468,6 +513,7 @@ class Twitter:
             info("Generating a post...")
 
         existing_posts = self.get_posts()
+        recent_openings = set(self._recent_opening_signatures(existing_posts))
         rejection_reasons: list[str] = []
 
         for attempt in range(5):
@@ -499,6 +545,13 @@ class Twitter:
             if self._is_too_similar_to_recent(cleaned, existing_posts):
                 rejection_reasons.append(
                     f"Attempt {attempt + 1}: too similar to recent posts"
+                )
+                continue
+
+            opening_signature = self._opening_signature(cleaned)
+            if opening_signature and opening_signature in recent_openings:
+                rejection_reasons.append(
+                    f"Attempt {attempt + 1}: opening too similar to recent hooks"
                 )
                 continue
 
