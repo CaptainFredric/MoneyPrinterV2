@@ -6,6 +6,28 @@ cd "$ROOT_DIR"
 
 echo "[setup] Root: $ROOT_DIR"
 
+PYTHON_BOOTSTRAP=""
+for candidate in python3.14 python3.13 python3.12 python3; do
+    if command -v "$candidate" >/dev/null 2>&1; then
+        version="$($candidate -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')"
+        major="${version%%.*}"
+        minor="${version##*.}"
+        if [[ "$major" -gt 3 || ( "$major" -eq 3 && "$minor" -ge 12 ) ]]; then
+            PYTHON_BOOTSTRAP="$(command -v "$candidate")"
+            break
+        fi
+    fi
+done
+
+if [[ -z "$PYTHON_BOOTSTRAP" ]]; then
+    echo "[setup] Python 3.12+ is required but no compatible interpreter was found on PATH."
+    echo "[setup] Install Python 3.12 or newer, then rerun this script."
+    exit 1
+fi
+
+echo "[setup] Using Python: $PYTHON_BOOTSTRAP"
+"$PYTHON_BOOTSTRAP" --version
+
 if [[ ! -f "config.json" ]]; then
   cp config.example.json config.json
   echo "[setup] Created config.json from config.example.json"
@@ -13,7 +35,7 @@ fi
 
 PYTHON_BIN="${ROOT_DIR}/venv/bin/python"
 if [[ ! -x "$PYTHON_BIN" ]]; then
-  python3 -m venv venv
+    "$PYTHON_BOOTSTRAP" -m venv venv
   echo "[setup] Created virtual environment at venv/"
 fi
 

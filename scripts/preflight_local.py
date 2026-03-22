@@ -41,6 +41,16 @@ def main() -> int:
 
     failures = 0
 
+    current_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+    if sys.version_info < (3, 12):
+        fail(
+            "Python 3.12+ is required. "
+            f"Current interpreter is {current_version}."
+        )
+        failures += 1
+    else:
+        ok(f"python_version={current_version}")
+
     stt_provider = str(cfg.get("stt_provider", "local_whisper")).lower()
 
     ok(f"stt_provider={stt_provider}")
