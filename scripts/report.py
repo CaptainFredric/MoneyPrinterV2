@@ -259,11 +259,13 @@ def build_report() -> dict:
         last_dt = None
         last_content = ""
         last_category = ""
+        last_tweet_url = ""
         if posts:
             try:
                 last_dt = datetime.strptime(posts[-1]["date"], "%m/%d/%Y, %H:%M:%S")
                 last_content = posts[-1].get("content", "")[:80]
                 last_category = posts[-1].get("category", "")
+                last_tweet_url = posts[-1].get("tweet_url", "")
             except (ValueError, KeyError):
                 pass
         report["twitter"].append({
@@ -275,6 +277,7 @@ def build_report() -> dict:
             "cooldown_status": _cooldown_remaining(last_dt) if last_dt else "✅ Ready to post",
             "last_content_preview": last_content,
             "last_category": last_category,
+            "last_tweet_url": last_tweet_url,
             "quality": _quality_snapshot(posts),
         })
 
@@ -314,6 +317,8 @@ def print_report(report: dict):
             print(f"  Category : {acc['last_category']}")
         if acc["last_content_preview"]:
             print(f"  Preview  : \"{acc['last_content_preview']}...\"")
+        if acc.get("last_tweet_url"):
+            print(f"  URL      : {acc['last_tweet_url']}")
         quality = acc.get("quality", {})
         if quality.get("sample_size", 0) > 0:
             print(

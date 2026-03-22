@@ -29,3 +29,11 @@
 2026-03-22 15:44:43,216 [INFO] Headless:  False
 2026-03-22 15:44:43,216 [INFO] Dry-run:   False
 2026-03-22 15:44:43,216 [INFO] ============================================================
+2026-03-22 16:00:20,958 [INFO] ▶  Starting job: twitter/EyeCatcher
+ℹ️ Initializing Twitter...
+ℹ️ Generating a post...
+ℹ️ Tweet length: 203 chars
+⚠️ Post cooldown active — last post was 3m ago. Wait 26m more to avoid spam flags.
+✅ Done posting.
+2026-03-22 16:01:40,748 [INFO] ✅ Job completed: twitter/EyeCatcher
+2026-03-22 16:01:40,754 [INFO] 📝 Posted: Did you think humans only dream in black & white? New research reveals some people can have truly tri-colored dreams! #D…
