@@ -3,6 +3,7 @@ import base64
 import json
 import time
 import os
+import platform
 import requests
 import assemblyai as aai
 
@@ -17,7 +18,6 @@ from constants import *
 from typing import List
 from moviepy.editor import *
 from termcolor import colored
-from selenium_firefox import *
 from selenium import webdriver
 from moviepy.video.fx.all import crop
 from moviepy.config import change_settings
@@ -78,6 +78,10 @@ class YouTube:
 
         # Initialize the Firefox profile
         self.options: Options = Options()
+
+        firefox_app_binary = "/Applications/Firefox.app/Contents/MacOS/firefox"
+        if platform.system() == "Darwin" and os.path.exists(firefox_app_binary):
+            self.options.binary_location = firefox_app_binary
 
         # Set headless state of browser
         if get_headless():

@@ -1,4 +1,5 @@
 import os
+import platform
 from urllib.parse import urlparse
 from typing import Any
 
@@ -7,7 +8,6 @@ from config import *
 from constants import *
 from llm_provider import generate_text
 from .Twitter import Twitter
-from selenium_firefox import *
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.service import Service
@@ -45,6 +45,10 @@ class AffiliateMarketing:
 
         # Initialize the Firefox profile
         self.options: Options = Options()
+
+        firefox_app_binary = "/Applications/Firefox.app/Contents/MacOS/firefox"
+        if platform.system() == "Darwin" and os.path.exists(firefox_app_binary):
+            self.options.binary_location = firefox_app_binary
 
         # Set headless state of browser
         if get_headless():
