@@ -454,6 +454,86 @@ class Twitter:
                 signatures.append(signature)
         return signatures
 
+    def _extract_hashtags(self, text: str) -> set[str]:
+        """
+        Extracts normalized hashtags from a tweet.
+
+        Args:
+            text (str): Tweet text
+
+        Returns:
+            hashtags (set[str]): Lowercased hashtags without '#'
+        """
+        return {tag.lower() for tag in re.findall(r"#([A-Za-z0-9_]+)", text or "")}
+
+    def _recent_hashtags(self, posts: List[dict], limit: int = 12) -> set[str]:
+        """
+        Collects hashtags from recent posts.
+
+        Args:
+            posts (List[dict]): Existing cached posts
+            limit (int): Number of recent posts to inspect
+
+        Returns:
+            hashtags (set[str]): Distinct recent hashtags
+        """
+        hashtags: set[str] = set()
+        for prev in posts[-limit:]:
+            hashtags.update(self._extract_hashtags(prev.get("content", "")))
+        return hashtags
+
+    def _cta_signature(self, text: str) -> str:
+        """
+        Produces a compact signature for the ending CTA sentence.
+
+        Args:
+            text (str): Tweet text
+
+        Returns:
+            signature (str): First words of last sentence, normalized
+        """
+        if not text:
+            return ""
+        sentences = re.split(r"(?<=[.!?])\s+", text.strip())
+        last_sentence = sentences[-1].strip() if sentences else ""
+        lowered = last_sentence.lower()
+
+        cta_markers = (
+            "try",
+            "share",
+            "follow",
+            "save",
+            "comment",
+            "reply",
+            "tell",
+            "bookmark",
+            "retweet",
+            "use",
+        )
+        if not any(marker in lowered for marker in cta_markers):
+            return ""
+
+        normalized = self._normalize_tweet(last_sentence)
+        return " ".join(normalized.split()[:5])
+
+    def _recent_cta_signatures(self, posts: List[dict], limit: int = 10) -> set[str]:
+        """
+        Collects CTA ending signatures from recent posts.
+
+        Args:
+            posts (List[dict]): Existing cached posts
+            limit (int): Number of recent posts to inspect
+
+        Returns:
+            signatures (set[str]): Distinct CTA signatures
+        """
+        signatures: set[str] = set()
+        for prev in posts[-limit:]:
+            signature = self._cta_signature(prev.get("content", ""))
+            if signature:
+                signatures.add(signature)
+        return signatures
+
     def _build_prompt(self, existing_posts: list[dict]) -> str:
         """
         Builds a context-aware LLM prompt that steers the model away from
@@ -487,6 +567,24 @@ class Twitter:
                 f"{joined_openings}\n"
             )
 
+        recent_hashtags = sorted(self._recent_hashtags(existing_posts))
+        hashtag_block = ""
+        if recent_hashtags:
+            joined_hashtags = "\n".join(f"  - #{tag}" for tag in recent_hashtags[:8])
+            hashtag_block = (
+                "\nRecent hashtags to avoid reusing too often:\n"
+                f"{joined_hashtags}\n"
+            )
+
+        recent_cta_signatures = sorted(self._recent_cta_signatures(existing_posts))
+        cta_block = ""
+        if recent_cta_signatures:
+            joined_ctas = "\n".join(f"  - {sig}" for sig in recent_cta_signatures[:6])
+            cta_block = (
+                "\nRecent CTA endings to vary away from:\n"
+                f"{joined_ctas}\n"
+            )
+
         return (
             f"You are a concise, engaging Twitter writer for the topic: '{self.topic}'.\n"
             f"Language: {get_twitter_language()}.\n"
@@ -496,9 +594,11 @@ class Twitter:
             "  2. Choose a SPECIFIC sub-angle — avoid generic advice.\n"
             "  3. Do NOT repeat any idea, phrasing, tool name, or example from the recent posts listed below.\n"
             "  4. Use a different opening pattern than recent posts (vary lead-in wording and structure).\n"
-            "  5. No preamble, no labels, no hashtag spam (max 2 hashtags if used).\n"
-            "  6. Return ONLY the raw tweet text."
-            f"{avoid_block}{opening_block}"
+            "  5. If you use hashtags, prefer fresh ones not recently used. Max 2 hashtags.\n"
+            "  6. Vary CTA endings when present (do not keep ending with the same ask).\n"
+            "  7. No preamble, no labels, no hashtag spam (max 2 hashtags if used).\n"
+            "  8. Return ONLY the raw tweet text."
+            f"{avoid_block}{opening_block}{hashtag_block}{cta_block}"
         )
 
     def generate_post(self) -> str:
@@ -514,6 +614,8 @@ class Twitter:
 
         existing_posts = self.get_posts()
         recent_openings = set(self._recent_opening_signatures(existing_posts))
+        recent_hashtags = self._recent_hashtags(existing_posts)
+        recent_cta_signatures = self._recent_cta_signatures(existing_posts)
         rejection_reasons: list[str] = []
 
         for attempt in range(5):
@@ -552,6 +654,20 @@ class Twitter:
             if opening_signature and opening_signature in recent_openings:
                 rejection_reasons.append(
                     f"Attempt {attempt + 1}: opening too similar to recent hooks"
+                )
+                continue
+
+            candidate_hashtags = self._extract_hashtags(cleaned)
+            if candidate_hashtags and len(candidate_hashtags & recent_hashtags) >= 2:
+                rejection_reasons.append(
+                    f"Attempt {attempt + 1}: reusing too many recent hashtags"
+                )
+                continue
+
+            cta_signature = self._cta_signature(cleaned)
+            if cta_signature and cta_signature in recent_cta_signatures:
+                rejection_reasons.append(
+                    f"Attempt {attempt + 1}: CTA ending too repetitive"
                 )
                 continue
 
