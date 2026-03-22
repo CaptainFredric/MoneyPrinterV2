@@ -64,6 +64,9 @@ def print_account(acc: dict):
     print(f"Posts         : {len(posts)}")
     print(f"Last Post     : {fmt_last_post(posts)}")
     if posts:
+        category = posts[-1].get("category", "")
+        if category:
+            print(f"Last Category : {category}")
         preview = posts[-1].get("content", "").replace("\n", " ")[:120]
         print(f"Last Preview  : {preview}...")
     print("=" * 60)
