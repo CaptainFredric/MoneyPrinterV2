@@ -40,7 +40,12 @@ Instead of chasing many tweaks at once, we progress through one phase at a time.
 ## Daily Operating Loop (Linear)
 1. Run `python3 scripts/performance_report.py`
 2. Read **Current Phase** and **Next Objective**
-3. Keep changes aligned to that objective only
-4. Re-check after 3–7 posts, then advance phase
+3. Preview tuning: `python3 scripts/auto_tune_ratios.py --dry-run`
+4. Apply tuning only when it supports current objective: `python3 scripts/auto_tune_ratios.py --apply`
+5. Re-check after 3–7 posts, then advance phase
+
+### Safety rule
+- Auto-tuning has a per-account cooldown (12h) to avoid ratio thrashing.
+- Do not force-apply tuning repeatedly within the same day.
 
 This keeps the project directional and avoids optimization thrash.
