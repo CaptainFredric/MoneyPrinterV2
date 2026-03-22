@@ -3,6 +3,8 @@ import base64
 import json
 import time
 import os
+import shutil
+import tempfile
 import platform
 import requests
 import assemblyai as aai
@@ -19,11 +21,14 @@ from typing import List
 from moviepy.editor import *
 from termcolor import colored
 from selenium import webdriver
+from selenium.common.exceptions import WebDriverException
 from moviepy.video.fx.all import crop
 from moviepy.config import change_settings
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from moviepy.video.tools.subtitles import SubtitlesClip
 from webdriver_manager.firefox import GeckoDriverManager
 from datetime import datetime
@@ -92,16 +97,47 @@ class YouTube:
                 f"Firefox profile path does not exist or is not a directory: {self._fp_profile_path}"
             )
 
+        # Remove stale lock files before launch
+        for lock_file_name in [".parentlock", "parent.lock", "lock"]:
+            lock_file_path = os.path.join(self._fp_profile_path, lock_file_name)
+            if os.path.exists(lock_file_path):
+                try:
+                    os.remove(lock_file_path)
+                except OSError:
+                    pass
+
         self.options.add_argument("-profile")
         self.options.add_argument(self._fp_profile_path)
 
         # Set the service
         self.service: Service = Service(GeckoDriverManager().install())
 
-        # Initialize the browser
-        self.browser: webdriver.Firefox = webdriver.Firefox(
-            service=self.service, options=self.options
-        )
+        # Initialize the browser — with fallback clone on WebDriverException
+        try:
+            self.browser: webdriver.Firefox = webdriver.Firefox(
+                service=self.service, options=self.options
+            )
+        except WebDriverException:
+            fallback_profile_path = tempfile.mkdtemp(prefix="mpv2_yt_ff_profile_")
+            shutil.copytree(self._fp_profile_path, fallback_profile_path, dirs_exist_ok=True)
+            for lock_file_name in [".parentlock", "parent.lock", "lock"]:
+                lock_file_path = os.path.join(fallback_profile_path, lock_file_name)
+                if os.path.exists(lock_file_path):
+                    try:
+                        os.remove(lock_file_path)
+                    except OSError:
+                        pass
+            fallback_options: Options = Options()
+            if platform.system() == "Darwin" and os.path.exists(firefox_app_binary):
+                fallback_options.binary_location = firefox_app_binary
+            if get_headless():
+                fallback_options.add_argument("--headless")
+            fallback_options.add_argument("-profile")
+            fallback_options.add_argument(fallback_profile_path)
+            self.options = fallback_options
+            self.browser = webdriver.Firefox(service=self.service, options=self.options)
+
+        self.wait: WebDriverWait = WebDriverWait(self.browser, 30)
 
     @property
     def niche(self) -> str:

@@ -1,8 +1,29 @@
 import os
 import json
+import tempfile
 
 from typing import List
 from config import ROOT_DIR
+
+
+def _atomic_write(path: str, data: dict) -> None:
+    """
+    Writes JSON to a temp file in the same directory, then atomically
+    replaces the target file.  Prevents half-written / corrupt cache files.
+    """
+    dir_name = os.path.dirname(path)
+    os.makedirs(dir_name, exist_ok=True)
+    fd, tmp_path = tempfile.mkstemp(dir=dir_name, suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w") as f:
+            json.dump(data, f, indent=4)
+        os.replace(tmp_path, path)
+    except Exception:
+        try:
+            os.remove(tmp_path)
+        except OSError:
+            pass
+        raise
 
 def get_cache_path() -> str:
     """
@@ -73,23 +94,25 @@ def get_accounts(provider: str) -> List[dict]:
     cache_path = get_provider_cache_path(provider)
 
     if not os.path.exists(cache_path):
-        # Create the cache file
-        with open(cache_path, 'w') as file:
-            json.dump({
-                "accounts": []
-            }, file, indent=4)
+        _atomic_write(cache_path, {"accounts": []})
 
-    with open(cache_path, 'r') as file:
-        parsed = json.load(file)
+    try:
+        with open(cache_path, 'r') as file:
+            parsed = json.load(file)
+    except (json.JSONDecodeError, OSError):
+        # Corrupt or unreadable cache — back it up and start fresh
+        backup_path = cache_path + ".bak"
+        try:
+            os.replace(cache_path, backup_path)
+        except OSError:
+            pass
+        _atomic_write(cache_path, {"accounts": []})
+        return []
 
-        if parsed is None:
-            return []
-        
-        if 'accounts' not in parsed:
-            return []
+    if not isinstance(parsed, dict) or 'accounts' not in parsed:
+        return []
 
-        # Get accounts dictionary
-        return parsed['accounts']
+    return parsed['accounts']
 
 def add_account(provider: str, account: dict) -> None:
     """
@@ -111,10 +134,7 @@ def add_account(provider: str, account: dict) -> None:
     accounts.append(account)
 
     # Write the new accounts to the cache
-    with open(cache_path, 'w') as file:
-        json.dump({
-            "accounts": accounts
-        }, file, indent=4)
+    _atomic_write(cache_path, {"accounts": accounts})
 
 def remove_account(provider: str, account_id: str) -> None:
     """
@@ -136,30 +156,29 @@ def remove_account(provider: str, account_id: str) -> None:
     # Write the new accounts to the cache
     cache_path = get_provider_cache_path(provider)
 
-    with open(cache_path, 'w') as file:
-        json.dump({
-            "accounts": accounts
-        }, file, indent=4)
+    _atomic_write(cache_path, {"accounts": accounts})
 
-def get_products() -> List[dict]:
-    """
-    Gets the products from the cache.
+def get_products()cts from the cache.
 
     Returns:
         products (List[dict]): The products
     """
     if not os.path.exists(get_afm_cache_path()):
-        # Create the cache file
-        with open(get_afm_cache_path(), 'w') as file:
-            json.dump({
-                "products": []
-            }, file, indent=4)
+        _atomic_write(get_afm_cache_path(), {"products": []})
 
-    with open(get_afm_cache_path(), 'r') as file:
-        parsed = json.load(file)
+    try:
+        with open(get_afm_cache_path(), 'r') as file:
+            parsed = json.load(file)
+    except (json.JSONDecodeError, OSError):
+        backup_path = get_afm_cache_path() + ".bak"
+        try:
+            os.replace(get_afm_cache_path(), backup_path)
+        except OSError:
+            pass
+        _atomic_write(get_afm_cache_path(), {"products": []})
+        return []
 
-        # Get the products
-        return parsed["products"]
+    return parsed.get("products", [])
     
 def add_product(product: dict) -> None:
     """
@@ -178,10 +197,7 @@ def add_product(product: dict) -> None:
     products.append(product)
 
     # Write the new products to the cache
-    with open(get_afm_cache_path(), 'w') as file:
-        json.dump({
-            "products": products
-        }, file, indent=4)
+    _atomic_write(get_afm_cache_path(), {"products": products})
     
 def get_results_cache_path() -> str:
     """
