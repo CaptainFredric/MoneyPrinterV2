@@ -1,11 +1,52 @@
 import os
 import sys
 import json
+import threading
 import srt_equalizer
 
 from termcolor import colored
 
 ROOT_DIR = os.path.dirname(sys.path[0])
+
+# ---------------------------------------------------------------------------
+# Config cache — reads config.json once per process, reloads only if the file
+# has been modified since the last read.  Prevents hundreds of redundant
+# open()/json.load() calls during a single session.
+# ---------------------------------------------------------------------------
+_config_lock = threading.Lock()
+_config_cache: dict | None = None
+_config_mtime: float = 0.0
+_CONFIG_PATH = os.path.join(ROOT_DIR, "config.json")
+
+
+def _load_config() -> dict:
+    """
+    Returns the parsed config.json, using a cached copy when the file has not
+    changed since the last read.  Thread-safe.
+    """
+    global _config_cache, _config_mtime
+    with _config_lock:
+        try:
+            mtime = os.path.getmtime(_CONFIG_PATH)
+        except OSError:
+            mtime = 0.0
+
+        if _config_cache is None or mtime != _config_mtime:
+            try:
+                with open(_CONFIG_PATH, "r") as f:
+                    _config_cache = json.load(f)
+                _config_mtime = mtime
+            except (OSError, json.JSONDecodeError) as exc:
+                if _config_cache is not None:
+                    # Return stale cache rather than crash
+                    pass
+                else:
+                    raise RuntimeError(
+                        f"Could not read config.json: {exc}. "
+                        "Make sure config.json exists (copy from config.example.json)."
+                    ) from exc
+
+        return _config_cache  # type: ignore[return-value]
 
 def assert_folder_structure() -> None:
     """
@@ -36,8 +77,8 @@ def get_email_credentials() -> dict:
     Returns:
         credentials (dict): The email credentials
     """
-    with open(os.path.join(ROOT_DIR, "config.json"), "r") as file:
-        return json.load(file)["email"]
+    cfg = _load_config()
+    return cfg["email"]
 
 def get_verbose() -> bool:
     """
@@ -46,8 +87,8 @@ def get_verbose() -> bool:
     Returns:
         verbose (bool): The verbose flag
     """
-    with open(os.path.join(ROOT_DIR, "config.json"), "r") as file:
-        return json.load(file)["verbose"]
+    cfg = _load_config()
+    return cfg["verbose"]
 
 def get_firefox_profile_path() -> str:
     """
@@ -56,8 +97,8 @@ def get_firefox_profile_path() -> str:
     Returns:
         path (str): The path to the Firefox profile
     """
-    with open(os.path.join(ROOT_DIR, "config.json"), "r") as file:
-        return json.load(file)["firefox_profile"]
+    cfg = _load_config()
+    return cfg["firefox_profile"]
 
 def get_headless() -> bool:
     """
@@ -66,8 +107,8 @@ def get_headless() -> bool:
     Returns:
         headless (bool): The headless flag
     """
-    with open(os.path.join(ROOT_DIR, "config.json"), "r") as file:
-        return json.load(file)["headless"]
+    cfg = _load_config()
+    return cfg["headless"]
 
 def get_ollama_base_url() -> str:
     """
@@ -76,8 +117,8 @@ def get_ollama_base_url() -> str:
     Returns:
         url (str): The Ollama base URL
     """
-    with open(os.path.join(ROOT_DIR, "config.json"), "r") as file:
-        return json.load(file).get("ollama_base_url", "http://127.0.0.1:11434")
+    cfg = _load_config()
+    return cfg.get("ollama_base_url", "http://127.0.0.1:11434")
 
 def get_ollama_model() -> str:
     """
@@ -86,8 +127,8 @@ def get_ollama_model() -> str:
     Returns:
         model (str): The Ollama model name, or empty string if not set.
     """
-    with open(os.path.join(ROOT_DIR, "config.json"), "r") as file:
-        return json.load(file).get("ollama_model", "")
+    cfg = _load_config()
+    return cfg.get("ollama_model", "")
 
 def get_twitter_language() -> str:
     """
@@ -96,8 +137,8 @@ def get_twitter_language() -> str:
     Returns:
         language (str): The Twitter language
     """
-    with open(os.path.join(ROOT_DIR, "config.json"), "r") as file:
-        return json.load(file)["twitter_language"]
+    cfg = _load_config()
+    return cfg["twitter_language"]
 
 def get_nanobanana2_api_base_url() -> str:
     """
@@ -106,8 +147,8 @@ def get_nanobanana2_api_base_url() -> str:
     Returns:
         url (str): API base URL
     """
-    with open(os.path.join(ROOT_DIR, "config.json"), "r") as file:
-        return json.load(file).get(
+    cfg = _load_config()
+    return cfg.get(
             "nanobanana2_api_base_url",
             "https://generativelanguage.googleapis.com/v1beta",
         )
@@ -119,9 +160,9 @@ def get_nanobanana2_api_key() -> str:
     Returns:
         key (str): API key
     """
-    with open(os.path.join(ROOT_DIR, "config.json"), "r") as file:
-        configured = json.load(file).get("nanobanana2_api_key", "")
-        return configured or os.environ.get("GEMINI_API_KEY", "")
+    cfg = _load_config()
+    configured = cfg.get("nanobanana2_api_key", "")
+    return configured or os.environ.get("GEMINI_API_KEY", "")
 
 def get_nanobanana2_model() -> str:
     """
@@ -130,8 +171,8 @@ def get_nanobanana2_model() -> str:
     Returns:
         model (str): Model name
     """
-    with open(os.path.join(ROOT_DIR, "config.json"), "r") as file:
-        return json.load(file).get("nanobanana2_model", "gemini-3.1-flash-image-preview")
+    cfg = _load_config()
+    return cfg.get("nanobanana2_model", "gemini-3.1-flash-image-preview")
 
 def get_nanobanana2_aspect_ratio() -> str:
     """
@@ -140,8 +181,8 @@ def get_nanobanana2_aspect_ratio() -> str:
     Returns:
         ratio (str): Aspect ratio
     """
-    with open(os.path.join(ROOT_DIR, "config.json"), "r") as file:
-        return json.load(file).get("nanobanana2_aspect_ratio", "9:16")
+    cfg = _load_config()
+    return cfg.get("nanobanana2_aspect_ratio", "9:16")
 
 def get_threads() -> int:
     """
@@ -150,8 +191,8 @@ def get_threads() -> int:
     Returns:
         threads (int): Amount of threads
     """
-    with open(os.path.join(ROOT_DIR, "config.json"), "r") as file:
-        return json.load(file)["threads"]
+    cfg = _load_config()
+    return cfg["threads"]
     
 def get_zip_url() -> str:
     """
@@ -160,8 +201,8 @@ def get_zip_url() -> str:
     Returns:
         url (str): The URL to the zip file
     """
-    with open(os.path.join(ROOT_DIR, "config.json"), "r") as file:
-        return json.load(file)["zip_url"]
+    cfg = _load_config()
+    return cfg["zip_url"]
 
 def get_is_for_kids() -> bool:
     """
@@ -170,8 +211,8 @@ def get_is_for_kids() -> bool:
     Returns:
         is_for_kids (bool): The is for kids flag
     """
-    with open(os.path.join(ROOT_DIR, "config.json"), "r") as file:
-        return json.load(file)["is_for_kids"]
+    cfg = _load_config()
+    return cfg["is_for_kids"]
 
 def get_google_maps_scraper_zip_url() -> str:
     """
@@ -180,8 +221,8 @@ def get_google_maps_scraper_zip_url() -> str:
     Returns:
         url (str): The URL to the zip file
     """
-    with open(os.path.join(ROOT_DIR, "config.json"), "r") as file:
-        return json.load(file)["google_maps_scraper"]
+    cfg = _load_config()
+    return cfg["google_maps_scraper"]
 
 def get_google_maps_scraper_niche() -> str:
     """
@@ -190,8 +231,8 @@ def get_google_maps_scraper_niche() -> str:
     Returns:
         niche (str): The niche
     """
-    with open(os.path.join(ROOT_DIR, "config.json"), "r") as file:
-        return json.load(file)["google_maps_scraper_niche"]
+    cfg = _load_config()
+    return cfg["google_maps_scraper_niche"]
 
 def get_scraper_timeout() -> int:
     """
@@ -200,8 +241,8 @@ def get_scraper_timeout() -> int:
     Returns:
         timeout (int): The timeout
     """
-    with open(os.path.join(ROOT_DIR, "config.json"), "r") as file:
-        return json.load(file)["scraper_timeout"] or 300
+    cfg = _load_config()
+    return cfg["scraper_timeout"] or 300
 
 def get_outreach_message_subject() -> str:
     """
@@ -210,8 +251,8 @@ def get_outreach_message_subject() -> str:
     Returns:
         subject (str): The outreach message subject
     """
-    with open(os.path.join(ROOT_DIR, "config.json"), "r") as file:
-        return json.load(file)["outreach_message_subject"]
+    cfg = _load_config()
+    return cfg["outreach_message_subject"]
     
 def get_outreach_message_body_file() -> str:
     """
@@ -220,8 +261,8 @@ def get_outreach_message_body_file() -> str:
     Returns:
         file (str): The outreach message body file
     """
-    with open(os.path.join(ROOT_DIR, "config.json"), "r") as file:
-        return json.load(file)["outreach_message_body_file"]
+    cfg = _load_config()
+    return cfg["outreach_message_body_file"]
 
 def get_tts_voice() -> str:
     """
@@ -230,8 +271,8 @@ def get_tts_voice() -> str:
     Returns:
         voice (str): The TTS voice
     """
-    with open(os.path.join(ROOT_DIR, "config.json"), "r") as file:
-        return json.load(file).get("tts_voice", "Jasper")
+    cfg = _load_config()
+    return cfg.get("tts_voice", "Jasper")
 
 def get_assemblyai_api_key() -> str:
     """
@@ -240,8 +281,8 @@ def get_assemblyai_api_key() -> str:
     Returns:
         key (str): The AssemblyAI API key
     """
-    with open(os.path.join(ROOT_DIR, "config.json"), "r") as file:
-        return json.load(file)["assembly_ai_api_key"]
+    cfg = _load_config()
+    return cfg["assembly_ai_api_key"]
 
 def get_stt_provider() -> str:
     """
@@ -250,8 +291,8 @@ def get_stt_provider() -> str:
     Returns:
         provider (str): The STT provider
     """
-    with open(os.path.join(ROOT_DIR, "config.json"), "r") as file:
-        return json.load(file).get("stt_provider", "local_whisper")
+    cfg = _load_config()
+    return cfg.get("stt_provider", "local_whisper")
 
 def get_whisper_model() -> str:
     """
@@ -260,8 +301,8 @@ def get_whisper_model() -> str:
     Returns:
         model (str): Whisper model name
     """
-    with open(os.path.join(ROOT_DIR, "config.json"), "r") as file:
-        return json.load(file).get("whisper_model", "base")
+    cfg = _load_config()
+    return cfg.get("whisper_model", "base")
 
 def get_whisper_device() -> str:
     """
@@ -270,8 +311,8 @@ def get_whisper_device() -> str:
     Returns:
         device (str): Whisper device
     """
-    with open(os.path.join(ROOT_DIR, "config.json"), "r") as file:
-        return json.load(file).get("whisper_device", "auto")
+    cfg = _load_config()
+    return cfg.get("whisper_device", "auto")
 
 def get_whisper_compute_type() -> str:
     """
@@ -280,8 +321,8 @@ def get_whisper_compute_type() -> str:
     Returns:
         compute_type (str): Whisper compute type
     """
-    with open(os.path.join(ROOT_DIR, "config.json"), "r") as file:
-        return json.load(file).get("whisper_compute_type", "int8")
+    cfg = _load_config()
+    return cfg.get("whisper_compute_type", "int8")
     
 def equalize_subtitles(srt_path: str, max_chars: int = 10) -> None:
     """
@@ -303,8 +344,8 @@ def get_font() -> str:
     Returns:
         font (str): The font
     """
-    with open(os.path.join(ROOT_DIR, "config.json"), "r") as file:
-        return json.load(file)["font"]
+    cfg = _load_config()
+    return cfg["font"]
 
 def get_fonts_dir() -> str:
     """
@@ -322,8 +363,8 @@ def get_imagemagick_path() -> str:
     Returns:
         path (str): The path to ImageMagick
     """
-    with open(os.path.join(ROOT_DIR, "config.json"), "r") as file:
-        return json.load(file)["imagemagick_path"]
+    cfg = _load_config()
+    return cfg["imagemagick_path"]
 
 def get_script_sentence_length() -> int:
     """
@@ -333,9 +374,9 @@ def get_script_sentence_length() -> int:
     Returns:
         length (int): Length of script's sentence
     """
-    with open(os.path.join(ROOT_DIR, "config.json"), "r") as file:
-        config_json = json.load(file)
-        if (config_json.get("script_sentence_length") is not None):
-            return config_json["script_sentence_length"]
-        else:
-            return 4
+    cfg = _load_config()
+    config_json = cfg
+    if (config_json.get("script_sentence_length") is not None):
+        return config_json["script_sentence_length"]
+    else:
+        return 4

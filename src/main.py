@@ -369,6 +369,10 @@ def main():
                     if acc["id"] == twitter_uuid:
                         account = acc
 
+                if account is None:
+                    error(f"Twitter account '{twitter_uuid}' not found. Add it via the Twitter Bot menu first.")
+                    return
+
                 add_product({
                     "id": str(uuid4()),
                     "affiliate_link": affiliate_link,
@@ -405,6 +409,13 @@ def main():
                 for acc in get_accounts("twitter"):
                     if acc["id"] == selected_product["twitter_uuid"]:
                         account = acc
+
+                if account is None:
+                    error(
+                        f"Twitter account '{selected_product['twitter_uuid']}' not found. "
+                        "Add it via the Twitter Bot menu first."
+                    )
+                    return
 
                 afm = AffiliateMarketing(selected_product["affiliate_link"], account["firefox_profile"], account["id"], account["nickname"], account["topic"])
 
