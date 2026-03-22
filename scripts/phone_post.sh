@@ -12,6 +12,7 @@
 # Options:
 #   phone_post.sh              → post from all twitter accounts (headless)
 #   phone_post.sh status       → show status report (no browser, instant)
+#   phone_post.sh performance  → show linear growth phase + next objective
 #   phone_post.sh backup       → manual cache backup
 #   phone_post.sh health       → daemon + report health check
 #   phone_post.sh check <id>   → inspect one twitter account
@@ -62,6 +63,9 @@ run_post_detached() {
 case "$MODE" in
     status)
         "$VENV_PYTHON" scripts/report.py
+        ;;
+    performance)
+        "$VENV_PYTHON" scripts/performance_report.py
         ;;
     health)
         bash "$ROOT_DIR/scripts/health_check.sh"
