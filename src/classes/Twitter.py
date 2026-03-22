@@ -280,6 +280,7 @@ class Twitter:
         post_category = self._infer_category_from_text(body)
         citation_source = self._extract_citation_source(body)
         angle_signature = self._extract_angle_signature(body, post_category)
+        tweet_url = self._resolve_post_permalink(body)
         resolved_format = "media" if media_path and post_mode == "media" else ("link" if post_urls else "text")
         self.add_post(
             {
@@ -289,13 +290,136 @@ class Twitter:
                 "format": resolved_format,
                 "citation_source": citation_source,
                 "angle_signature": angle_signature,
+                "tweet_url": tweet_url,
+                "post_verified": bool(tweet_url),
             }
         )
 
         self._record_angle_signature(angle_signature, post_category)
 
-        success("Posted to Twitter successfully!")
+        if tweet_url:
+            success(f"Posted to Twitter successfully! URL: {tweet_url}")
+        else:
+            success("Posted to Twitter successfully!")
+            warning("Posted, but could not verify permalink from UI. Check account timeline if needed.")
         return "posted"
+
+    def _canonical_status_url(self, url: str) -> str:
+        """
+        Canonicalizes status URLs to x.com/<user>/status/<id> form.
+
+        Args:
+            url (str): Candidate URL
+
+        Returns:
+            canonical (str): Canonical status URL or empty string
+        """
+        if not isinstance(url, str) or not url.strip():
+            return ""
+
+        try:
+            parsed = urlparse(url.strip())
+        except Exception:
+            return ""
+
+        host = (parsed.netloc or "").lower().replace("www.", "")
+        if host not in {"x.com", "twitter.com", "mobile.twitter.com", "mobile.x.com"}:
+            return ""
+
+        match = re.search(r"/([A-Za-z0-9_]+)/status/(\d+)", parsed.path or "")
+        if not match:
+            return ""
+
+        handle, status_id = match.group(1), match.group(2)
+        return f"https://x.com/{handle}/status/{status_id}"
+
+    def _collect_status_link_candidates(self) -> list[str]:
+        """
+        Collects possible status links visible on the current page.
+
+        Returns:
+            candidates (list[str]): Canonical status links
+        """
+        candidates: list[str] = []
+        seen = set()
+
+        for anchor in self.browser.find_elements(By.XPATH, "//a[contains(@href, '/status/')]"):
+            href = anchor.get_attribute("href") or ""
+            canonical = self._canonical_status_url(href)
+            if canonical and canonical not in seen:
+                seen.add(canonical)
+                candidates.append(canonical)
+
+        return candidates
+
+    def _resolve_account_handle(self) -> str:
+        """
+        Resolves currently logged-in account handle from profile nav links.
+
+        Returns:
+            handle (str): Username without @, or empty string
+        """
+        selectors = [
+            (By.CSS_SELECTOR, "a[data-testid='AppTabBar_Profile_Link']"),
+            (By.XPATH, "//a[contains(@href,'/') and contains(@href,'x.com/') and @data-testid='AppTabBar_Profile_Link']"),
+            (By.XPATH, "//a[contains(@href,'/') and contains(@href,'twitter.com/') and @data-testid='AppTabBar_Profile_Link']"),
+        ]
+
+        for selector in selectors:
+            try:
+                elem = self.browser.find_element(*selector)
+                href = elem.get_attribute("href") or ""
+                match = re.search(r"(?:x|twitter)\.com/([A-Za-z0-9_]+)$", href)
+                if match:
+                    return match.group(1)
+            except Exception:
+                continue
+
+        return ""
+
+    def _resolve_post_permalink(self, posted_text: str) -> str:
+        """
+        Best-effort permalink resolution after posting.
+
+        Args:
+            posted_text (str): Posted tweet text
+
+        Returns:
+            tweet_url (str): Canonical tweet URL if found
+        """
+        normalized_target = self._normalize_tweet(posted_text)
+
+        for _ in range(3):
+            candidates = self._collect_status_link_candidates()
+            if candidates:
+                return candidates[0]
+            time.sleep(1)
+
+        handle = self._resolve_account_handle()
+        if not handle:
+            return ""
+
+        try:
+            self.browser.get(f"https://x.com/{handle}")
+            self.wait.until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, "article[data-testid='tweet']"))
+            )
+
+            articles = self.browser.find_elements(By.CSS_SELECTOR, "article[data-testid='tweet']")
+            for article in articles[:5]:
+                article_text = self._normalize_tweet(article.text or "")
+                if normalized_target and article_text and normalized_target[:80] not in article_text:
+                    continue
+                links = article.find_elements(By.XPATH, ".//a[contains(@href, '/status/')]")
+                for link in links:
+                    href = link.get_attribute("href") or ""
+                    canonical = self._canonical_status_url(href)
+                    if canonical:
+                        return canonical
+        except Exception:
+            return ""
+
+        return ""
 
     def get_posts(self) -> List[dict]:
         """
