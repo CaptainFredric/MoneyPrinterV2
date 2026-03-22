@@ -111,13 +111,26 @@ class Twitter:
 
     def post(self, text: Optional[str] = None) -> None:
         """
-        Starts the Twitter Bot.
+        Posts a tweet, then quits the browser.
+        Always closes the browser window — even on error.
 
         Args:
             text (str): The text to post
 
         Returns:
             None
+        """
+        try:
+            self._do_post(text)
+        finally:
+            try:
+                self.browser.quit()
+            except Exception:
+                pass
+
+    def _do_post(self, text: Optional[str] = None) -> None:
+        """
+        Internal post implementation — browser lifecycle managed by post().
         """
         bot: webdriver.Firefox = self.browser
         verbose: bool = get_verbose()
@@ -132,6 +145,23 @@ class Twitter:
             if prev.get("content", "").strip() == post_content.strip():
                 warning("Duplicate post detected — skipping to avoid spam.")
                 return
+
+        # Cooldown guard: enforce minimum gap between posts (default 30 min)
+        if existing_posts:
+            last_post = existing_posts[-1]
+            try:
+                last_dt = datetime.strptime(last_post["date"], "%m/%d/%Y, %H:%M:%S")
+                elapsed = (now - last_dt).total_seconds()
+                min_gap = 1800  # 30 minutes in seconds
+                if elapsed < min_gap:
+                    remaining = int((min_gap - elapsed) / 60)
+                    warning(
+                        f"Post cooldown active — last post was {int(elapsed / 60)}m ago. "
+                        f"Wait {remaining}m more to avoid spam flags."
+                    )
+                    return
+            except (ValueError, KeyError):
+                pass  # Malformed date entry — allow post
 
         bot.get("https://x.com/compose/post")
 
@@ -159,7 +189,6 @@ class Twitter:
                 "Could not find tweet text box. Ensure you are logged into X in this Firefox profile."
             )
 
-
         post_button = None
         post_button_selectors = [
             (By.XPATH, "//button[@data-testid='tweetButtonInline']"),
@@ -180,7 +209,16 @@ class Twitter:
 
         if verbose:
             print(colored(" => Pressed [ENTER] Button on Twitter..", "blue"))
-        time.sleep(2)
+
+        # Wait for compose dialog to close — confirms X accepted the post
+        try:
+            self.wait.until(
+                EC.invisibility_of_element_located(
+                    (By.CSS_SELECTOR, "div[data-testid='tweetTextarea_0']")
+                )
+            )
+        except Exception:
+            time.sleep(2)  # Non-fatal fallback
 
         # Add the post to the cache
         self.add_post({"content": body, "date": now.strftime("%m/%d/%Y, %H:%M:%S")})

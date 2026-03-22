@@ -44,21 +44,28 @@ def main():
 
         if not account_id:
             error("Account UUID cannot be empty.")
+            sys.exit(1)
 
-        for acc in accounts:
-            if acc["id"] == account_id:
-                if verbose:
-                    info("Initializing Twitter...")
-                twitter = Twitter(
-                    acc["id"],
-                    acc["nickname"],
-                    acc["firefox_profile"],
-                    acc["topic"]
-                )
-                twitter.post()
-                if verbose:
-                    success("Done posting.")
-                break
+        matched_acc = next((a for a in accounts if a["id"] == account_id), None)
+        if matched_acc is None:
+            error(f"Twitter account '{account_id}' not found in cache. Has it been removed?")
+            sys.exit(1)
+
+        if verbose:
+            info("Initializing Twitter...")
+        twitter = Twitter(
+            matched_acc["id"],
+            matched_acc["nickname"],
+            matched_acc["firefox_profile"],
+            matched_acc["topic"]
+        )
+        try:
+            twitter.post()
+        except Exception as exc:
+            error(f"Twitter post failed: {exc}")
+            sys.exit(1)
+        if verbose:
+            success("Done posting.")
     elif purpose == "youtube":
         tts = TTS()
 
@@ -66,23 +73,34 @@ def main():
 
         if not account_id:
             error("Account UUID cannot be empty.")
+            sys.exit(1)
 
-        for acc in accounts:
-            if acc["id"] == account_id:
-                if verbose:
-                    info("Initializing YouTube...")
-                youtube = YouTube(
-                    acc["id"],
-                    acc["nickname"],
-                    acc["firefox_profile"],
-                    acc["niche"],
-                    acc["language"]
-                )
-                youtube.generate_video(tts)
-                youtube.upload_video()
-                if verbose:
-                    success("Uploaded Short.")
-                break
+        matched_acc = next((a for a in accounts if a["id"] == account_id), None)
+        if matched_acc is None:
+            error(f"YouTube account '{account_id}' not found in cache. Has it been removed?")
+            sys.exit(1)
+
+        if verbose:
+            info("Initializing YouTube...")
+        youtube = YouTube(
+            matched_acc["id"],
+            matched_acc["nickname"],
+            matched_acc["firefox_profile"],
+            matched_acc["niche"],
+            matched_acc["language"]
+        )
+        try:
+            youtube.generate_video(tts)
+            youtube.upload_video()
+        except Exception as exc:
+            error(f"YouTube upload failed: {exc}")
+            try:
+                youtube.browser.quit()
+            except Exception:
+                pass
+            sys.exit(1)
+        if verbose:
+            success("Uploaded Short.")
     else:
         error("Invalid Purpose, exiting...")
         sys.exit(1)

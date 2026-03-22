@@ -158,7 +158,9 @@ def remove_account(provider: str, account_id: str) -> None:
 
     _atomic_write(cache_path, {"accounts": accounts})
 
-def get_products()cts from the cache.
+def get_products() -> List[dict]:
+    """
+    Gets the products from the cache.
 
     Returns:
         products (List[dict]): The products
