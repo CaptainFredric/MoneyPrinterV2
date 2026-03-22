@@ -42,9 +42,9 @@ def main() -> int:
     failures = 0
 
     current_version = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
-    if sys.version_info < (3, 12):
+    if not (sys.version_info.major == 3 and sys.version_info.minor == 12):
         fail(
-            "Python 3.12+ is required. "
+            "Python 3.12.x is required. "
             f"Current interpreter is {current_version}."
         )
         failures += 1
