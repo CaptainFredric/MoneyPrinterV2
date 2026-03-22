@@ -13,6 +13,7 @@ What it does:
 Usage:
   python scripts/auto_tune_ratios.py --dry-run
   python scripts/auto_tune_ratios.py --apply
+    python scripts/auto_tune_ratios.py --apply --no-phase-lock
 """
 
 import argparse
@@ -125,7 +126,46 @@ def _cooldown_ready(account_id: str, state: dict, min_hours: int = 12) -> bool:
     return datetime.now() - last_dt >= timedelta(hours=min_hours)
 
 
-def _propose_updates_for_account(account: dict, summary: dict) -> tuple[dict, list[str]]:
+def _apply_phase_lock(
+    phase: str,
+    current: dict,
+    updated: dict,
+    recent: dict,
+    notes: list[str],
+) -> dict:
+    """
+    Enforces single-objective ratio changes based on current phase.
+
+    Phase policy:
+      - Phase 1: baseline quality → do not increase ratios
+      - Phase 2: format mix       → tune link/media only
+      - Phase 3: credibility      → tune citation only
+      - Phase 4: scale            → allow all
+    """
+    idx = _phase_index(phase)
+
+    if idx == 1:
+        for key in RATIO_KEYS:
+            updated[key] = min(updated[key], current[key])
+        notes.append("phase-lock: Phase 1 (no ratio increases)")
+        return updated
+
+    if idx == 2:
+        updated["citation_post_ratio"] = current["citation_post_ratio"]
+        notes.append("phase-lock: Phase 2 (freeze citation ratio)")
+        return updated
+
+    if idx == 3:
+        updated["link_post_ratio"] = current["link_post_ratio"]
+        updated["media_post_ratio"] = current["media_post_ratio"]
+        notes.append("phase-lock: Phase 3 (tune citation only)")
+        return updated
+
+    notes.append("phase-lock: Phase 4 (all ratios eligible)")
+    return updated
+
+
+def _propose_updates_for_account(account: dict, summary: dict, phase_lock: bool = True) -> tuple[dict, list[str]]:
     phase = summary.get("phase", "Phase 1: Baseline Quality")
     recent = summary.get("recent", {})
     delta = _delta_for_phase(phase)
@@ -175,6 +215,9 @@ def _propose_updates_for_account(account: dict, summary: dict) -> tuple[dict, li
         updated["media_post_ratio"] = min(updated["media_post_ratio"], current["media_post_ratio"])
         notes.append("hook safeguard: hold link/media growth")
 
+    if phase_lock:
+        updated = _apply_phase_lock(phase, current, updated, recent, notes)
+
     # Clamp to global hard bounds.
     for key, value in updated.items():
         lower, upper = RATIO_BOUNDS[key]
@@ -187,9 +230,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Auto tune posting ratios by phase")
     parser.add_argument("--apply", action="store_true", help="Write changes to .mp/twitter.json")
     parser.add_argument("--dry-run", action="store_true", help="Preview changes only")
+    parser.add_argument("--no-phase-lock", action="store_true", help="Allow cross-phase ratio changes")
     args = parser.parse_args()
 
     do_apply = args.apply and not args.dry_run
+    phase_lock = not args.no_phase_lock
 
     cache = _load_json(TWITTER_CACHE, {"accounts": []})
     state = _load_json(TUNING_STATE, {"accounts": {}})
@@ -214,7 +259,7 @@ def main() -> None:
             print(f"- {nickname}: skipped (tuning cooldown active)")
             continue
 
-        proposed, notes = _propose_updates_for_account(account, summary)
+        proposed, notes = _propose_updates_for_account(account, summary, phase_lock=phase_lock)
 
         before = {key: round(float(account.get(key, DEFAULTS[key])), 3) for key in RATIO_KEYS}
         after = proposed
