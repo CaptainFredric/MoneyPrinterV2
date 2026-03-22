@@ -13,3 +13,13 @@
 ✅ Posted to Twitter successfully!
 ✅ Done posting.
 2026-03-22 10:01:58,676 [INFO] ✅ Job completed: twitter/EyeCatcher
+2026-03-22 13:00:11,207 [INFO] ▶  Starting job: twitter/niche_launch_1
+ℹ️ Initializing Twitter...
+ℹ️ Generating a post...
+ℹ️ Tweet length: 176 chars
+ => Posting to Twitter: Boost your focus with the Pomodoro Technique! Work...
+ => Pressed [ENTER] Button on Twitter..
+✅ Posted to Twitter successfully!
+✅ Done posting.
+2026-03-22 13:01:48,173 [INFO] ✅ Job completed: twitter/niche_launch_1
+2026-03-22 13:17:32,924 [INFO] Received signal 15 — shutting down after current tick.
