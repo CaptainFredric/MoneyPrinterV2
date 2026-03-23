@@ -90,6 +90,8 @@ def main() -> None:
             print(f"Handle  : @{status['configured_handle']}")
         print(f"Ready   : {'YES' if status.get('ready') else 'NO'}")
         print(f"Reason  : {status.get('reason', 'unknown')}")
+        if status.get("reason") == "profile-in-use":
+            print("Hint    : Close Firefox windows using this profile, then rerun session check.")
         if status.get("current_url"):
             print(f"URL     : {status['current_url']}")
         if not status.get("ready"):
