@@ -302,7 +302,7 @@ user_pref("services.sync.globalScore", 0);
 user_pref("services.sync.lastPing", 1774160937);
 user_pref("services.sync.lastSync", "Sun Mar 22 2026 02:06:39 GMT-0500 (Central Daylight Time)");
 user_pref("services.sync.lastTabFetch", 1774163199);
-user_pref("services.sync.nextSync", 1774269623);
+user_pref("services.sync.nextSync", 1774274568);
 user_pref("services.sync.prefs.lastSync", "1774161304.9");
 user_pref("services.sync.prefs.sync-seen.browser.contentblocking.category", true);
 user_pref("services.sync.prefs.sync-seen.browser.startup.page", true);
