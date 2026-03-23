@@ -324,5 +324,15 @@
     "confidence_score": 39,
     "confidence_level": "low",
     "attempt_time": "2026-03-23T18:15:39.330982"
+  },
+  {
+    "timestamp": "2026-03-23T18:21:18.543109",
+    "account_uuid": "6f4f6c1a-2b4d-4dc9-9e8e-7d0e4f5c1a21",
+    "account_nickname": "niche_launch_1",
+    "action": "post_attempt",
+    "status": "skipped",
+    "using_fallback_profile": true,
+    "reason": "cooldown:24m",
+    "attempt_time": "2026-03-23T18:21:18.510700"
   }
 ]
