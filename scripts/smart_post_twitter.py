@@ -193,13 +193,14 @@ def _try_account(account: dict, headless: bool) -> tuple[str, str]:
         env = os.environ.copy()
         if headless:
             env["MPV2_HEADLESS"] = "1"
+        timeout_seconds = int(os.environ.get("MPV2_SMART_TIMEOUT_SECONDS", "300"))
 
         python_exec = _get_python_executable()
         cmd = [python_exec, str(CRON_SCRIPT), "twitter", account["id"], model]
         result = subprocess.run(
             cmd,
             env=env,
-            timeout=300,
+            timeout=timeout_seconds,
             capture_output=True,
             text=True,
         )
@@ -238,6 +239,22 @@ def _try_account(account: dict, headless: bool) -> tuple[str, str]:
         if post_status:
             return "failed", post_status
         return "failed", f"exit:{result.returncode}"
+    except subprocess.TimeoutExpired as exc:
+        partial_out = exc.stdout or ""
+        partial_err = exc.stderr or ""
+        if isinstance(partial_out, bytes):
+            partial_out = partial_out.decode("utf-8", errors="ignore")
+        if isinstance(partial_err, bytes):
+            partial_err = partial_err.decode("utf-8", errors="ignore")
+        if partial_out:
+            print(partial_out, end="" if partial_out.endswith("\n") else "\n")
+        if partial_err:
+            print(partial_err, end="" if partial_err.endswith("\n") else "\n")
+
+        reason = f"cron-timeout:{int(getattr(exc, 'timeout', timeout_seconds) or timeout_seconds)}s"
+        print(f"⏭️  Skip {nickname}: {reason}")
+        print(f"MPV2_SMART_STATUS:{nickname}:skipped")
+        return "skipped", reason
     except Exception as exc:
         message = str(exc)
         if "No such file or directory" in message or "Process unexpectedly closed" in message:
