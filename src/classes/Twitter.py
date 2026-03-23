@@ -771,14 +771,23 @@ class Twitter:
             tweet_url (str): Canonical tweet URL if found
         """
         normalized_target = self._normalize_tweet(posted_text)
+        expected_handle = (self._configured_account_handle() or self._resolve_account_handle() or "").strip().lstrip("@").lower()
 
         for _ in range(3):
             candidates = self._collect_status_link_candidates()
             if candidates:
-                return candidates[0]
+                if expected_handle:
+                    for candidate in candidates:
+                        match = re.search(r"^https://x\.com/([A-Za-z0-9_]+)/status/\d+$", candidate)
+                        if not match:
+                            continue
+                        if match.group(1).lower() == expected_handle:
+                            return candidate
+                else:
+                    return candidates[0]
             time.sleep(1)
 
-        handle = self._resolve_account_handle()
+        handle = (self._configured_account_handle() or self._resolve_account_handle() or "").strip().lstrip("@")
         if not handle:
             return ""
 
