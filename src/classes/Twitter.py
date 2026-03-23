@@ -55,6 +55,9 @@ class Twitter:
         self.topic: str = topic
         self.using_fallback_profile: bool = False
         self.fallback_profile_path: str = ""
+        self.post_attempt_timestamp: Optional[datetime] = None
+        self.session_health_check_cache: Optional[dict] = None
+        self.last_cooldown_warning_time: Optional[datetime] = None
 
         # Initialize the Firefox profile
         self.options: Options = Options()
@@ -176,28 +179,20 @@ class Twitter:
 
         post_content = self._clean_tweet(post_content)
         now: datetime = datetime.now()
+        self.post_attempt_timestamp = now
 
         # Deduplication guard: skip if recent content is identical or too similar
         if self._is_too_similar_to_recent(post_content, existing_posts):
             warning("Post is too similar to recent content — skipping to avoid spam.")
+            self._log_transaction('post_attempt', 'skipped', {'reason': 'similarity', 'attempt_time': now.isoformat()})
             return "skipped:similarity"
 
-        # Cooldown guard: enforce minimum gap between posts (default 30 min)
-        if existing_posts:
-            last_post = existing_posts[-1]
-            try:
-                last_dt = datetime.strptime(last_post["date"], "%m/%d/%Y, %H:%M:%S")
-                elapsed = (now - last_dt).total_seconds()
-                min_gap = 1800  # 30 minutes in seconds
-                if elapsed < min_gap:
-                    remaining = int((min_gap - elapsed) / 60)
-                    warning(
-                        f"Post cooldown active — last post was {int(elapsed / 60)}m ago. "
-                        f"Wait {remaining}m more to avoid spam flags."
-                    )
-                    return "skipped:cooldown"
-            except (ValueError, KeyError):
-                pass  # Malformed date entry — allow post
+        # Enhanced cooldown guard with transaction log checking
+        cooldown_reason = self._verify_cooldown_strict(existing_posts)
+        if cooldown_reason:
+            warning(f"Cooldown active: {cooldown_reason}")
+            self._log_transaction('post_attempt', 'skipped', {'reason': cooldown_reason, 'attempt_time': now.isoformat()})
+            return f"skipped:{cooldown_reason}"
 
         bot.get("https://x.com/compose/post")
 
@@ -287,6 +282,11 @@ class Twitter:
                 "X accepted the compose action, but the new post could not be verified on the account timeline. "
                 "Not saving this run to cache."
             )
+            self._log_transaction('post_attempt', 'failed', {
+                'reason': 'unverified',
+                'text_snippet': body[:80],
+                'attempt_time': now.isoformat()
+            })
             return "failed:unverified"
 
         resolved_format = "media" if media_path and post_mode == "media" else ("link" if post_urls else "text")
@@ -304,6 +304,13 @@ class Twitter:
         )
 
         self._record_angle_signature(angle_signature, post_category)
+
+        self._log_transaction('post_attempt', 'success', {
+            'text_snippet': body[:80],
+            'tweet_url': tweet_url,
+            'category': post_category,
+            'attempt_time': now.isoformat()
+        })
 
         success(f"Posted to Twitter successfully! URL: {tweet_url}")
         return "posted"
@@ -577,6 +584,199 @@ class Twitter:
             "current_url": current_url,
             "handle": self.get_live_account_handle(),
         }
+
+    def _log_transaction(self, action: str, status: str, metadata: Optional[dict] = None) -> None:
+        """
+        Logs a post transaction attempt for debugging and audit trail.
+        
+        Args:
+            action (str): e.g., 'post_attempt', 'session_check', 'profile_healthcheck'
+            status (str): e.g., 'success', 'failed', 'skipped'
+            metadata (dict): Additional context (text snippet, error, reason, etc.)
+        """
+        import os
+        from config import ROOT_DIR
+        
+        log_dir = os.path.join(ROOT_DIR, 'logs', 'transaction_log')
+        os.makedirs(log_dir, exist_ok=True)
+        
+        log_entry = {
+            'timestamp': datetime.now().isoformat(),
+            'account_uuid': self.account_uuid,
+            'account_nickname': self.account_nickname,
+            'action': action,
+            'status': status,
+            'using_fallback_profile': self.using_fallback_profile,
+            **(metadata or {})
+        }
+        
+        log_file = os.path.join(log_dir, f"{self.account_nickname}.log")
+        try:
+            from cache import _atomic_write
+            existing_logs = []
+            if os.path.exists(log_file):
+                try:
+                    with open(log_file, 'r') as f:
+                        existing_logs = json.load(f)
+                except (json.JSONDecodeError, IOError):
+                    existing_logs = []
+            
+            # Keep last 100 transaction logs per account
+            existing_logs.append(log_entry)
+            existing_logs = existing_logs[-100:]
+            
+            _atomic_write(log_file, existing_logs)
+        except Exception as e:
+            # Non-fatal: transaction logging should not break posting
+            pass
+
+    def _clean_stale_locks(self) -> int:
+        """
+        Cleans stale Firefox lock files that indicate crashed/hung processes.
+        Checks for zombie processes before removing locks.
+        
+        Returns:
+            count (int): Number of locks cleaned
+        """
+        import subprocess
+        
+        cleaned = 0
+        lock_files = ['.parentlock', 'parent.lock', 'lock']
+        
+        for lock_name in lock_files:
+            lock_path = os.path.join(self.fp_profile_path, lock_name)
+            if not os.path.exists(lock_path):
+                continue
+            
+            try:
+                # On macOS, check if the process owning this lock is still alive
+                result = subprocess.run(
+                    ['lsof', lock_path],
+                    capture_output=True,
+                    text=True,
+                    timeout=2
+                )
+                
+                # If lsof returns no process holding the lock, it's stale
+                lines = result.stdout.strip().split('\n')[1:]  # Skip header
+                if not lines or (len(lines) == 1 and not lines[0]):
+                    # Lock is stale; safe to remove
+                    try:
+                        os.remove(lock_path)
+                        cleaned += 1
+                        if get_verbose():
+                            info(f"Cleaned stale lock: {lock_path}")
+                    except OSError:
+                        pass
+            except (subprocess.TimeoutExpired, FileNotFoundError):
+                # lsof not available or timeout; skip this check
+                pass
+        
+        return cleaned
+
+    def _verify_cooldown_strict(self, existing_posts: list[dict]) -> Optional[str]:
+        """
+        Strict cooldown verification that also checks transaction logs for recent attempts.
+        Returns reason string if cooldown active, None if OK to post.
+        """
+        if not existing_posts:
+            return None
+        
+        now = datetime.now()
+        min_gap = 1800  # 30 minutes
+        
+        # Check cached posts
+        last_post = existing_posts[-1]
+        try:
+            last_dt = datetime.strptime(last_post["date"], "%m/%d/%Y, %H:%M:%S")
+            elapsed = (now - last_dt).total_seconds()
+            
+            if elapsed < min_gap:
+                remaining = int((min_gap - elapsed) / 60)
+                return f"cooldown:{remaining}m"
+        except (ValueError, KeyError):
+            pass
+        
+        # Check transaction logs for very recent failed attempts (last 5 min)
+        log_file = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
+                                '..', 'logs', 'transaction_log', f"{self.account_nickname}.log")
+        try:
+            if os.path.exists(log_file):
+                with open(log_file, 'r') as f:
+                    logs = json.load(f)
+                
+                for log_entry in reversed(logs[-20:]):  # Check last 20 attempts
+                    try:
+                        log_time = datetime.fromisoformat(log_entry['timestamp'])
+                        time_since = (now - log_time).total_seconds()
+                        
+                        # If we see a failed/skipped post within 10 min, add extra buffer
+                        if time_since < 600 and log_entry.get('action') == 'post_attempt':
+                            if log_entry.get('status') in ['failed', 'skipped']:
+                                return f"recent_failure:{int(600 - time_since)}s"
+                    except (ValueError, KeyError):
+                        continue
+        except (json.JSONDecodeError, IOError):
+            pass
+        
+        return None
+
+    def _cache_integrity_check(self) -> dict:
+        """
+        Validates cache file integrity before and after posts.
+        
+        Returns:
+            status (dict): integrity report
+        """
+        from cache import get_twitter_cache_path
+        
+        cache_path = get_twitter_cache_path()
+        issues = []
+        
+        if not os.path.exists(cache_path):
+            return {"valid": True, "issues": [], "warning": "cache_not_yet_created"}
+        
+        try:
+            with open(cache_path, 'r') as f:
+                cache_data = json.load(f)
+            
+            # Check if our account exists
+            account_uuid = self.account_uuid
+            if account_uuid not in cache_data:
+                issues.append(f"account_uuid_missing:{account_uuid}")
+            
+            # Check for structural issues
+            if cache_data.get(account_uuid):
+                account_cache = cache_data[account_uuid]
+                
+                posts = account_cache.get('posts', [])
+                if posts:
+                    # Verify post structure
+                    for i, post in enumerate(posts):
+                        if not isinstance(post, dict):
+                            issues.append(f"post_{i}_not_dict")
+                        if 'date' in post and not isinstance(post['date'], str):
+                            issues.append(f"post_{i}_date_invalid_type")
+                        if 'content' in post and not isinstance(post['content'], str):
+                            issues.append(f"post_{i}_content_not_string")
+            
+            return {
+                "valid": len(issues) == 0,
+                "issues": issues,
+                "post_count": len(cache_data.get(account_uuid, {}).get('posts', []))
+            }
+        
+        except json.JSONDecodeError as e:
+            return {
+                "valid": False,
+                "issues": [f"json_decode_error:{str(e)}"],
+                "corrupted": True
+            }
+        except Exception as e:
+            return {
+                "valid": False,
+                "issues": [f"check_error:{str(e)}"]
+            }
 
     def _collect_timeline_posts(self, handle: str, limit: int = 5) -> list[dict]:
         """

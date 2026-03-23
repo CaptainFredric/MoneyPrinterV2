@@ -1,0 +1,14 @@
+[
+    {
+        "timestamp": "2026-03-23T10:18:26.785281",
+        "account_uuid": "6f4f6c1a-2b4d-4dc9-9e8e-7d0e4f5c1a21",
+        "account_nickname": "niche_launch_1",
+        "action": "post_attempt",
+        "status": "success",
+        "using_fallback_profile": false,
+        "text_snippet": "Did 80/20 principle hold true for your week? What's one non-negotiable task you'",
+        "tweet_url": "https://x.com/NicheNewton/status/2036100128998645869",
+        "category": "task-management",
+        "attempt_time": "2026-03-23T10:17:20.189541"
+    }
+]
