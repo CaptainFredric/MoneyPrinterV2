@@ -17,7 +17,7 @@ user_pref("app.update.background.previous.reasons", "[\"unsupported OS\",\"not d
 user_pref("app.update.checkInstallTime", false);
 user_pref("app.update.disabledForTesting", true);
 user_pref("app.update.lastUpdateTime.addon-background-update-timer", 1774262673);
-user_pref("app.update.lastUpdateTime.background-update-timer", 1774285563);
+user_pref("app.update.lastUpdateTime.background-update-timer", 1774307163);
 user_pref("app.update.lastUpdateTime.browser-cleanup-thumbnails", 1774305389);
 user_pref("app.update.lastUpdateTime.glean-addons-daily", 1774262673);
 user_pref("app.update.lastUpdateTime.region-update-timer", 1774161222);
