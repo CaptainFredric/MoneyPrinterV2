@@ -16,6 +16,7 @@ Usage:
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 from datetime import datetime
@@ -34,6 +35,32 @@ DOT_VENV_PYTHON = ROOT_DIR / ".venv" / "bin" / "python"
 CRON_SCRIPT = ROOT_DIR / "src" / "cron.py"
 CONFIG_PATH = ROOT_DIR / "config.json"
 TRANSACTION_LOG_DIR = ROOT_DIR / "logs" / "transaction_log"
+
+
+def _parse_confidence(post_status: str) -> tuple[int, str]:
+    score = -1
+    level = ""
+    score_match = re.search(r"confidence=(\d+)", post_status or "")
+    level_match = re.search(r"level=([a-zA-Z\-]+)", post_status or "")
+    if score_match:
+        try:
+            score = int(score_match.group(1))
+        except Exception:
+            score = -1
+    if level_match:
+        level = str(level_match.group(1)).strip().lower()
+    return score, level
+
+
+def _is_confidence_qualified(post_status: str, min_score: int) -> tuple[bool, str]:
+    score, level = _parse_confidence(post_status)
+    if score < 0:
+        return False, "missing-confidence"
+    if score < min_score:
+        return False, f"low-confidence:score={score}:level={level or 'unknown'}"
+    if level and level not in {"high", "verified"}:
+        return False, f"low-confidence-level:{level}:score={score}"
+    return True, f"confidence-ok:score={score}:level={level or 'n/a'}"
 
 
 def _load_accounts() -> list[dict]:
@@ -194,6 +221,8 @@ def _try_account(account: dict, headless: bool) -> tuple[str, str]:
         if headless:
             env["MPV2_HEADLESS"] = "1"
         timeout_seconds = int(os.environ.get("MPV2_SMART_TIMEOUT_SECONDS", "300"))
+        min_confidence_score = int(os.environ.get("MPV2_CONFIDENCE_MIN_SCORE", "80"))
+        strict_confidence_gate = os.environ.get("MPV2_STRICT_CONFIDENCE_GATE", "1").strip() not in {"0", "false", "False"}
 
         python_exec = _get_python_executable()
         cmd = [python_exec, str(CRON_SCRIPT), "twitter", account["id"], model]
@@ -216,6 +245,12 @@ def _try_account(account: dict, headless: bool) -> tuple[str, str]:
                 post_status = line.split("MPV2_POST_STATUS:", 1)[1].strip()
 
         if result.returncode == 0 and post_status.startswith("posted"):
+            if strict_confidence_gate:
+                qualified, gate_reason = _is_confidence_qualified(post_status, min_confidence_score)
+                if not qualified:
+                    print(f"⏭️  Skip {nickname}: {gate_reason}")
+                    print(f"MPV2_SMART_STATUS:{nickname}:skipped")
+                    return "skipped", gate_reason
             print(f"MPV2_SMART_STATUS:{nickname}:posted")
             return "posted", post_status
 
@@ -283,6 +318,11 @@ def main() -> None:
         default="",
         help="limit attempts to one account nickname or uuid",
     )
+    parser.add_argument(
+        "--prefer-primary",
+        action="store_true",
+        help="prioritize MPV2_PRIMARY_ACCOUNT when no --only-account is supplied",
+    )
     args = parser.parse_args()
 
     if args.headless:
@@ -291,6 +331,13 @@ def main() -> None:
     accounts = _sort_accounts_for_rotation(_load_accounts())
     if args.only_account:
         accounts = _filter_accounts(accounts, args.only_account)
+    elif args.prefer_primary:
+        primary_account = os.environ.get("MPV2_PRIMARY_ACCOUNT", "").strip()
+        if primary_account:
+            primary_matches = _filter_accounts(accounts, primary_account)
+            if primary_matches:
+                primary_id = primary_matches[0].get("id", "")
+                accounts = sorted(accounts, key=lambda a: 0 if a.get("id", "") == primary_id else 1)
     if not accounts:
         print("No twitter accounts found in cache.", file=sys.stderr)
         sys.exit(1)

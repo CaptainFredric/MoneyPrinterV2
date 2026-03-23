@@ -357,7 +357,11 @@ class Twitter:
                 'confidence_level': confidence_payload["level"],
                 'attempt_time': now.isoformat()
             })
-            return "posted:pending-verification"
+            return (
+                "posted:pending-verification:"
+                f"confidence={confidence_payload['score']}:"
+                f"level={confidence_payload['level']}"
+            )
 
         self.add_post(
             {
@@ -388,7 +392,7 @@ class Twitter:
         })
 
         success(f"Posted to Twitter successfully! URL: {tweet_url}")
-        return "posted"
+        return f"posted:confidence={confidence_payload['score']}:level={confidence_payload['level']}"
 
     def _media_state_path(self) -> str:
         """

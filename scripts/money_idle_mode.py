@@ -100,6 +100,29 @@ def _parse_posted_count(output: str) -> int:
         return 0
 
 
+def _parse_post_status(output: str) -> str:
+    status = ""
+    for line in (output or "").splitlines():
+        if line.startswith("MPV2_POST_STATUS:"):
+            status = line.split("MPV2_POST_STATUS:", 1)[1].strip()
+    return status
+
+
+def _parse_confidence(post_status: str) -> tuple[int, str]:
+    score = -1
+    level = ""
+    score_match = re.search(r"confidence=(\d+)", post_status or "")
+    level_match = re.search(r"level=([a-zA-Z\-]+)", post_status or "")
+    if score_match:
+        try:
+            score = int(score_match.group(1))
+        except Exception:
+            score = -1
+    if level_match:
+        level = str(level_match.group(1)).strip().lower()
+    return score, level
+
+
 def _parse_cooldown_minutes(output: str) -> int:
     minutes = 0
     for match in re.finditer(r"cooldown:(\d+)m", output):
@@ -143,6 +166,9 @@ def main() -> None:
     parser.add_argument("--headless", action="store_true", help="force headless mode")
     parser.add_argument("--cleanup-every", type=int, default=6, help="run stale lock cleanup every N cycles")
     parser.add_argument("--session-check-every", type=int, default=4, help="run session checks every N cycles")
+    parser.add_argument("--verify-every", type=int, default=3, help="run verify/backfill every N cycles when no qualified post")
+    parser.add_argument("--confidence-min-score", type=int, default=int(os.environ.get("MPV2_CONFIDENCE_MIN_SCORE", "80")))
+    parser.add_argument("--fast-retry-minutes", type=int, default=4, help="short retry sleep when post confidence is below threshold")
     parser.add_argument("--once", action="store_true", help="run one cycle and exit")
     args = parser.parse_args()
 
@@ -186,19 +212,34 @@ def main() -> None:
                 str(SMART_SCRIPT),
                 "--headless",
                 "--allow-no-post",
+                "--prefer-primary",
                 "--only-account",
                 args.primary_account,
             ]
             smart_result = _run_cmd(smart_cmd, env)
             smart_output = f"{smart_result.stdout}\n{smart_result.stderr}"
             posted_count = _parse_posted_count(smart_output)
+            post_status = _parse_post_status(smart_output)
+            confidence_score, confidence_level = _parse_confidence(post_status)
+            qualified_post = (
+                posted_count > 0
+                and confidence_score >= args.confidence_min_score
+                and (not confidence_level or confidence_level in {"high", "verified"})
+            )
             cooldown_minutes = _parse_cooldown_minutes(smart_output)
 
-            verify_cmd = [str(VENV_PYTHON), str(VERIFY_SCRIPT), args.primary_account]
-            verify_result = _run_cmd(verify_cmd, env)
+            run_verify_backfill = qualified_post or (args.verify_every > 0 and cycle_index % args.verify_every == 0)
 
-            backfill_cmd = [str(VENV_PYTHON), str(BACKFILL_SCRIPT), args.primary_account, "--headless"]
-            backfill_result = _run_cmd(backfill_cmd, env)
+            verify_result = CmdResult(code=0, stdout="", stderr="")
+            backfill_result = CmdResult(code=0, stdout="", stderr="")
+            if run_verify_backfill:
+                verify_cmd = [str(VENV_PYTHON), str(VERIFY_SCRIPT), args.primary_account]
+                verify_result = _run_cmd(verify_cmd, env)
+
+                backfill_cmd = [str(VENV_PYTHON), str(BACKFILL_SCRIPT), args.primary_account, "--headless"]
+                backfill_result = _run_cmd(backfill_cmd, env)
+            else:
+                print("[idle] Skipping verify/backfill this cycle (no qualified post, non-maintenance cycle).")
 
             if args.cleanup_every > 0 and cycle_index % args.cleanup_every == 0:
                 cleanup_cmd = [str(VENV_PYTHON), str(CLEANUP_SCRIPT)]
@@ -212,6 +253,10 @@ def main() -> None:
             adaptive_sleep = base_sleep
             if cooldown_minutes > 0:
                 adaptive_sleep = max(adaptive_sleep, cooldown_minutes + random.randint(1, 4))
+            elif post_status.startswith("posted") and not qualified_post:
+                adaptive_sleep = min(adaptive_sleep, max(1, args.fast_retry_minutes))
+            elif "cron-timeout:" in post_status:
+                adaptive_sleep = max(adaptive_sleep, 6)
 
             cycle_finished_at = datetime.now().isoformat(timespec="seconds")
             state = {
@@ -220,6 +265,11 @@ def main() -> None:
                 "started_at": cycle_started_at,
                 "finished_at": cycle_finished_at,
                 "posted_count": posted_count,
+                "post_status": post_status,
+                "confidence_score": confidence_score,
+                "confidence_level": confidence_level,
+                "qualified_post": qualified_post,
+                "verify_backfill_ran": run_verify_backfill,
                 "cooldown_minutes_detected": cooldown_minutes,
                 "next_sleep_minutes": 0 if args.once else adaptive_sleep,
                 "smart_exit_code": smart_result.code,
