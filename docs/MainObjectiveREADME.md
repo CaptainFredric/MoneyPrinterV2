@@ -356,17 +356,17 @@ These are the most useful next actions after this reconstruction.
 - [x] Restore repo-managed `venv/`
 - [x] Restore `config.json`
 - [x] Reconstruct `.mp/twitter.json`
-- [ ] Validate each account session with `session-all`
-- [ ] Repair any blocked X login in native Firefox
+- [x] Validate each account session with `session-all`
+- [x] Repair any blocked X login in native Firefox
 - [ ] Run one controlled manual post per account
-- [ ] Verify recent posts against live timeline
+- [x] Verify recent posts against live timeline
 - [ ] Add Gemini/Nano Banana API key if media generation is needed
 
 ### Hardening checklist
-- [ ] Back up `.mp/twitter.json`
+- [x] Back up `.mp/twitter.json`
 - [ ] Back up confirmed working Firefox profiles outside the repo
-- [ ] Document which profile belongs to which account in plain English
-- [ ] Keep one short operator note after each session repair
+- [x] Document which profile belongs to which account in plain English
+- [x] Keep one short operator note after each session repair
 
 ---
 

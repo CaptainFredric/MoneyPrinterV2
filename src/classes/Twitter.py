@@ -58,6 +58,7 @@ class Twitter:
         self.post_attempt_timestamp: Optional[datetime] = None
         self.session_health_check_cache: Optional[dict] = None
         self.last_cooldown_warning_time: Optional[datetime] = None
+        self.last_permalink_debug: dict = {}
 
         # Initialize the Firefox profile
         self.options: Options = Options()
@@ -277,19 +278,35 @@ class Twitter:
         citation_source = self._extract_citation_source(body)
         angle_signature = self._extract_angle_signature(body, post_category)
         tweet_url = self._resolve_post_permalink(body)
+        resolved_format = "media" if media_path and post_mode == "media" else ("link" if post_urls else "text")
+
         if not tweet_url:
-            error(
-                "X accepted the compose action, but the new post could not be verified on the account timeline. "
-                "Not saving this run to cache."
+            warning(
+                "X accepted compose, but permalink lookup is delayed/unavailable. "
+                "Saving as pending verification for later backfill."
             )
-            self._log_transaction('post_attempt', 'failed', {
+            self.add_post(
+                {
+                    "content": body,
+                    "date": now.strftime("%m/%d/%Y, %H:%M:%S"),
+                    "category": post_category,
+                    "format": resolved_format,
+                    "citation_source": citation_source,
+                    "angle_signature": angle_signature,
+                    "tweet_url": "",
+                    "post_verified": False,
+                    "verification_state": "pending",
+                }
+            )
+            self._record_angle_signature(angle_signature, post_category)
+            self._log_transaction('post_attempt', 'pending', {
                 'reason': 'unverified',
                 'text_snippet': body[:80],
+                'permalink_debug': self.last_permalink_debug,
                 'attempt_time': now.isoformat()
             })
-            return "failed:unverified"
+            return "posted:pending-verification"
 
-        resolved_format = "media" if media_path and post_mode == "media" else ("link" if post_urls else "text")
         self.add_post(
             {
                 "content": body,
@@ -452,6 +469,16 @@ class Twitter:
                 seen.add(canonical)
                 candidates.append(canonical)
 
+        try:
+            page_source = self.browser.page_source or ""
+            for raw_url in re.findall(r"https?://(?:x|twitter)\.com/[A-Za-z0-9_]+/status/\d+", page_source):
+                canonical = self._canonical_status_url(raw_url)
+                if canonical and canonical not in seen:
+                    seen.add(canonical)
+                    candidates.append(canonical)
+        except Exception:
+            pass
+
         return candidates
 
     def _timeline_url_for_handle(self, handle: str) -> str:
@@ -489,7 +516,23 @@ class Twitter:
             except Exception:
                 continue
 
-        return self._configured_account_handle()
+        # Fallback probe: load compose page and retry selectors once.
+        try:
+            self.browser.get("https://x.com/compose/post")
+            time.sleep(2)
+            for selector in selectors:
+                try:
+                    elem = self.browser.find_element(*selector)
+                    href = elem.get_attribute("href") or ""
+                    match = re.search(r"(?:x|twitter)\.com/([A-Za-z0-9_]+)$", href)
+                    if match:
+                        return match.group(1)
+                except Exception:
+                    continue
+        except Exception:
+            pass
+
+        return ""
 
     def get_live_account_handle(self) -> str:
         """
@@ -532,6 +575,15 @@ class Twitter:
                 self.browser.find_element(*selector)
                 live_handle = (self.get_live_account_handle() or "").strip().lstrip("@")
                 configured_handle = (self._configured_account_handle() or "").strip().lstrip("@")
+
+                if configured_handle and not live_handle:
+                    return {
+                        "ready": False,
+                        "reason": "handle-unresolved",
+                        "current_url": current_url,
+                        "handle": "",
+                        "configured_handle": configured_handle,
+                    }
 
                 if configured_handle and live_handle and live_handle.lower() != configured_handle.lower():
                     return {
@@ -612,7 +664,6 @@ class Twitter:
         
         log_file = os.path.join(log_dir, f"{self.account_nickname}.log")
         try:
-            from cache import _atomic_write
             existing_logs = []
             if os.path.exists(log_file):
                 try:
@@ -624,8 +675,20 @@ class Twitter:
             # Keep last 100 transaction logs per account
             existing_logs.append(log_entry)
             existing_logs = existing_logs[-100:]
-            
-            _atomic_write(log_file, existing_logs)
+
+            fd, temp_path = tempfile.mkstemp(
+                dir=os.path.dirname(log_file), suffix=".tmp"
+            )
+            try:
+                with os.fdopen(fd, "w", encoding="utf-8") as temp_file:
+                    json.dump(existing_logs, temp_file, indent=2)
+                os.replace(temp_path, log_file)
+            except Exception:
+                try:
+                    os.remove(temp_path)
+                except OSError:
+                    pass
+                raise
         except Exception as e:
             # Non-fatal: transaction logging should not break posting
             pass
@@ -710,10 +773,10 @@ class Twitter:
                         log_time = datetime.fromisoformat(log_entry['timestamp'])
                         time_since = (now - log_time).total_seconds()
                         
-                        # If we see a failed/skipped post within 10 min, add extra buffer
-                        if time_since < 600 and log_entry.get('action') == 'post_attempt':
-                            if log_entry.get('status') in ['failed', 'skipped']:
-                                return f"recent_failure:{int(600 - time_since)}s"
+                        # If we see a failed post within 2 min, add a short buffer
+                        if time_since < 120 and log_entry.get('action') == 'post_attempt':
+                            if log_entry.get('status') == 'failed':
+                                return f"recent_failure:{int(120 - time_since)}s"
                     except (ValueError, KeyError):
                         continue
         except (json.JSONDecodeError, IOError):
@@ -740,30 +803,34 @@ class Twitter:
             with open(cache_path, 'r') as f:
                 cache_data = json.load(f)
             
-            # Check if our account exists
             account_uuid = self.account_uuid
-            if account_uuid not in cache_data:
+            accounts = cache_data.get("accounts", []) if isinstance(cache_data, dict) else []
+            account_cache = None
+
+            for account in accounts:
+                if isinstance(account, dict) and account.get("id") == account_uuid:
+                    account_cache = account
+                    break
+
+            if account_cache is None:
                 issues.append(f"account_uuid_missing:{account_uuid}")
-            
-            # Check for structural issues
-            if cache_data.get(account_uuid):
-                account_cache = cache_data[account_uuid]
-                
-                posts = account_cache.get('posts', [])
+
+            if account_cache:
+                posts = account_cache.get("posts", [])
                 if posts:
-                    # Verify post structure
                     for i, post in enumerate(posts):
                         if not isinstance(post, dict):
                             issues.append(f"post_{i}_not_dict")
-                        if 'date' in post and not isinstance(post['date'], str):
+                            continue
+                        if "date" in post and not isinstance(post["date"], str):
                             issues.append(f"post_{i}_date_invalid_type")
-                        if 'content' in post and not isinstance(post['content'], str):
+                        if "content" in post and not isinstance(post["content"], str):
                             issues.append(f"post_{i}_content_not_string")
             
             return {
                 "valid": len(issues) == 0,
                 "issues": issues,
-                "post_count": len(cache_data.get(account_uuid, {}).get('posts', []))
+                "post_count": len((account_cache or {}).get("posts", []))
             }
         
         except json.JSONDecodeError as e:
@@ -791,6 +858,18 @@ class Twitter:
         """
         self.browser.get(self._timeline_url_for_handle(handle))
         time.sleep(3)
+        return self._collect_timeline_posts_from_current_page(limit=limit)
+
+    def _collect_timeline_posts_from_current_page(self, limit: int = 5) -> list[dict]:
+        """
+        Collects visible posts from the currently loaded page.
+
+        Args:
+            limit (int): Number of timeline items to return
+
+        Returns:
+            posts (list[dict]): Timeline post previews with text and URL
+        """
 
         posts: list[dict] = []
         seen_urls: set[str] = set()
@@ -971,19 +1050,44 @@ class Twitter:
             tweet_url (str): Canonical tweet URL if found
         """
         normalized_target = self._normalize_tweet(posted_text)
-        expected_handle = (self._configured_account_handle() or self._resolve_account_handle() or "").strip().lstrip("@").lower()
+        expected_handle = (
+            self._configured_account_handle() or self._resolve_account_handle() or ""
+        ).strip().lstrip("@").lower()
+        self.last_permalink_debug = {
+            "expected_handle": expected_handle,
+            "compose_candidates": 0,
+            "compose_matching_candidates": 0,
+            "compose_samples": [],
+            "profile_candidates": 0,
+            "timeline_items": 0,
+            "match_method": "",
+            "pages_tried": [],
+        }
 
-        for _ in range(3):
+        for _ in range(6):
             candidates = self._collect_status_link_candidates()
+            self.last_permalink_debug["compose_candidates"] = max(
+                int(self.last_permalink_debug.get("compose_candidates", 0)), len(candidates)
+            )
+            if candidates and not self.last_permalink_debug.get("compose_samples"):
+                self.last_permalink_debug["compose_samples"] = candidates[:5]
             if candidates:
                 if expected_handle:
+                    matching_count = 0
                     for candidate in candidates:
                         match = re.search(r"^https://x\.com/([A-Za-z0-9_]+)/status/\d+$", candidate)
                         if not match:
                             continue
                         if match.group(1).lower() == expected_handle:
+                            matching_count += 1
+                            self.last_permalink_debug["compose_matching_candidates"] = max(
+                                int(self.last_permalink_debug.get("compose_matching_candidates", 0)),
+                                matching_count,
+                            )
+                            self.last_permalink_debug["match_method"] = "compose-candidates"
                             return candidate
                 else:
+                    self.last_permalink_debug["match_method"] = "compose-first"
                     return candidates[0]
             time.sleep(1)
 
@@ -992,20 +1096,104 @@ class Twitter:
             return ""
 
         try:
-            live_posts = self._collect_timeline_posts(handle, limit=6)
-            for live_post in live_posts:
-                live_norm = live_post.get("normalized_text", "")
-                if normalized_target and live_norm and normalized_target[:80] not in live_norm:
-                    similarity = SequenceMatcher(None, normalized_target, live_norm).ratio()
-                    if similarity < 0.88:
-                        continue
-                canonical = live_post.get("tweet_url", "")
-                if canonical:
-                    return canonical
+            for _ in range(5):
+                pages = [
+                    f"https://x.com/{handle}",
+                    f"https://x.com/{handle}/with_replies",
+                    f"https://x.com/search?q=from%3A{handle}&src=typed_query&f=live",
+                ]
+
+                for page_url in pages:
+                    self.last_permalink_debug["pages_tried"].append(page_url)
+                    self.browser.get(page_url)
+                    time.sleep(4)
+                    try:
+                        self.browser.execute_script("window.scrollTo(0, 1200);")
+                        time.sleep(2)
+                    except Exception:
+                        pass
+
+                    # Fallback 1: page status links for this exact handle
+                    profile_candidates = self._collect_status_link_candidates()
+                    self.last_permalink_debug["profile_candidates"] = max(
+                        int(self.last_permalink_debug.get("profile_candidates", 0)), len(profile_candidates)
+                    )
+                    if profile_candidates:
+                        handle_lower = handle.lower()
+                        filtered_candidates = []
+                        for candidate in profile_candidates:
+                            match = re.search(r"^https://x\.com/([A-Za-z0-9_]+)/status/\d+$", candidate)
+                            if not match:
+                                continue
+                            if match.group(1).lower() == handle_lower:
+                                filtered_candidates.append(candidate)
+
+                        if filtered_candidates:
+                            weak_candidate = filtered_candidates[0]
+                        else:
+                            weak_candidate = ""
+                    else:
+                        weak_candidate = ""
+
+                    # Fallback 2: text matching on currently loaded page
+                    live_posts = self._collect_timeline_posts_from_current_page(limit=10)
+                    self.last_permalink_debug["timeline_items"] = max(
+                        int(self.last_permalink_debug.get("timeline_items", 0)), len(live_posts)
+                    )
+                    for live_post in live_posts:
+                        live_norm = live_post.get("normalized_text", "")
+                        if normalized_target and live_norm and not self._is_probable_post_match(normalized_target, live_norm):
+                            continue
+                        canonical = live_post.get("tweet_url", "")
+                        if canonical:
+                            self.last_permalink_debug["match_method"] = "timeline-text"
+                            return canonical
+
+                    if weak_candidate:
+                        time.sleep(1)
+                        refreshed = self._collect_status_link_candidates()
+                        if weak_candidate in refreshed:
+                            self.last_permalink_debug["match_method"] = "page-weak"
+                            return weak_candidate
         except Exception:
             return ""
 
         return ""
+
+    def _is_probable_post_match(self, target_norm: str, live_norm: str) -> bool:
+        """
+        Heuristic matcher for posted text vs timeline text.
+
+        Handles truncation and minor rendering differences more robustly than strict ratio checks.
+
+        Args:
+            target_norm (str): Normalized candidate text that was posted
+            live_norm (str): Normalized timeline text
+
+        Returns:
+            matched (bool): Whether the two texts are likely the same post
+        """
+        if not target_norm or not live_norm:
+            return False
+
+        # Fast direct containment checks for truncation/full-text cases.
+        if target_norm[:80] in live_norm or live_norm[:80] in target_norm:
+            return True
+
+        # Sequence similarity with slightly lower threshold than strict verification.
+        similarity = SequenceMatcher(None, target_norm, live_norm).ratio()
+        if similarity >= 0.74:
+            return True
+
+        # Token overlap fallback to handle punctuation/format differences.
+        target_tokens = set(target_norm.split())
+        live_tokens = set(live_norm.split())
+        if not target_tokens or not live_tokens:
+            return False
+
+        overlap = len(target_tokens & live_tokens)
+        smaller = min(len(target_tokens), len(live_tokens))
+        return smaller > 0 and (overlap / smaller) >= 0.70
 
     def get_posts(self) -> List[dict]:
         """

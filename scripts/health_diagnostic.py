@@ -253,6 +253,9 @@ def main():
         target = sys.argv[1]
     else:
         target = None
+
+    if target and str(target).strip().lower() == "all":
+        target = None
     
     print("\n" + "="*60)
     print("MoneyPrinterV2 Health Diagnostic")

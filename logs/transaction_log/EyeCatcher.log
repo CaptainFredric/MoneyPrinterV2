@@ -1,0 +1,234 @@
+[
+  {
+    "timestamp": "2026-03-23T10:31:17.996201",
+    "account_uuid": "8d11dbfb-cdd8-4db7-9830-8ee115748e52",
+    "account_nickname": "EyeCatcher",
+    "action": "post_attempt",
+    "status": "failed",
+    "using_fallback_profile": false,
+    "reason": "unverified",
+    "text_snippet": "Your brain's sense of time is wildly inaccurate \u2013 research shows we're on averag",
+    "attempt_time": "2026-03-23T10:30:05.901263"
+  },
+  {
+    "timestamp": "2026-03-23T10:36:50.038063",
+    "account_uuid": "8d11dbfb-cdd8-4db7-9830-8ee115748e52",
+    "account_nickname": "EyeCatcher",
+    "action": "post_attempt",
+    "status": "skipped",
+    "using_fallback_profile": false,
+    "reason": "recent_failure:267s",
+    "attempt_time": "2026-03-23T10:36:50.029808"
+  },
+  {
+    "timestamp": "2026-03-23T10:41:16.041870",
+    "account_uuid": "8d11dbfb-cdd8-4db7-9830-8ee115748e52",
+    "account_nickname": "EyeCatcher",
+    "action": "post_attempt",
+    "status": "skipped",
+    "using_fallback_profile": false,
+    "reason": "recent_failure:333s",
+    "attempt_time": "2026-03-23T10:41:16.038559"
+  },
+  {
+    "timestamp": "2026-03-23T10:43:36.578342",
+    "account_uuid": "8d11dbfb-cdd8-4db7-9830-8ee115748e52",
+    "account_nickname": "EyeCatcher",
+    "action": "post_attempt",
+    "status": "failed",
+    "using_fallback_profile": false,
+    "reason": "unverified",
+    "text_snippet": "Ever wonder why we're more productive in the morning? Research suggests our brai",
+    "attempt_time": "2026-03-23T10:42:19.431763"
+  },
+  {
+    "timestamp": "2026-03-23T10:46:53.258730",
+    "account_uuid": "8d11dbfb-cdd8-4db7-9830-8ee115748e52",
+    "account_nickname": "EyeCatcher",
+    "action": "post_attempt",
+    "status": "skipped",
+    "using_fallback_profile": false,
+    "reason": "recent_failure:403s",
+    "attempt_time": "2026-03-23T10:46:53.253031"
+  },
+  {
+    "timestamp": "2026-03-23T10:52:09.089673",
+    "account_uuid": "8d11dbfb-cdd8-4db7-9830-8ee115748e52",
+    "account_nickname": "EyeCatcher",
+    "action": "post_attempt",
+    "status": "failed",
+    "using_fallback_profile": false,
+    "reason": "unverified",
+    "text_snippet": "What if our brains are tricked into perceiving time as linear, when in fact, we'",
+    "attempt_time": "2026-03-23T10:50:27.795139"
+  },
+  {
+    "timestamp": "2026-03-23T10:54:30.779201",
+    "account_uuid": "8d11dbfb-cdd8-4db7-9830-8ee115748e52",
+    "account_nickname": "EyeCatcher",
+    "action": "post_attempt",
+    "status": "skipped",
+    "using_fallback_profile": false,
+    "reason": "recent_failure:158s",
+    "attempt_time": "2026-03-23T10:54:30.777331"
+  },
+  {
+    "timestamp": "2026-03-23T10:56:54.770207",
+    "account_uuid": "8d11dbfb-cdd8-4db7-9830-8ee115748e52",
+    "account_nickname": "EyeCatcher",
+    "action": "post_attempt",
+    "status": "failed",
+    "using_fallback_profile": false,
+    "reason": "unverified",
+    "text_snippet": "Your mind is wired to forget happy memories, not sad ones. Discover why & how to",
+    "permalink_debug": {
+      "expected_handle": "eyecaughtthat2",
+      "compose_candidates": 6,
+      "profile_candidates": 0,
+      "timeline_items": 0,
+      "match_method": ""
+    },
+    "attempt_time": "2026-03-23T10:55:14.694296"
+  },
+  {
+    "timestamp": "2026-03-23T10:58:35.691550",
+    "account_uuid": "8d11dbfb-cdd8-4db7-9830-8ee115748e52",
+    "account_nickname": "EyeCatcher",
+    "action": "post_attempt",
+    "status": "skipped",
+    "using_fallback_profile": false,
+    "reason": "recent_failure:19s",
+    "attempt_time": "2026-03-23T10:58:35.683234"
+  },
+  {
+    "timestamp": "2026-03-23T11:01:28.082753",
+    "account_uuid": "8d11dbfb-cdd8-4db7-9830-8ee115748e52",
+    "account_nickname": "EyeCatcher",
+    "action": "post_attempt",
+    "status": "failed",
+    "using_fallback_profile": false,
+    "reason": "unverified",
+    "text_snippet": "Your brains process 36,000 thoughts daily \u2013 yet only 3-5% are consciously recall",
+    "permalink_debug": {
+      "expected_handle": "eyecaughtthat2",
+      "compose_candidates": 5,
+      "profile_candidates": 0,
+      "timeline_items": 0,
+      "match_method": "",
+      "pages_tried": [
+        "https://x.com/EyeCaughtThat2",
+        "https://x.com/EyeCaughtThat2/with_replies",
+        "https://x.com/search?q=from%3AEyeCaughtThat2&src=typed_query&f=live",
+        "https://x.com/EyeCaughtThat2",
+        "https://x.com/EyeCaughtThat2/with_replies",
+        "https://x.com/search?q=from%3AEyeCaughtThat2&src=typed_query&f=live",
+        "https://x.com/EyeCaughtThat2",
+        "https://x.com/EyeCaughtThat2/with_replies",
+        "https://x.com/search?q=from%3AEyeCaughtThat2&src=typed_query&f=live",
+        "https://x.com/EyeCaughtThat2",
+        "https://x.com/EyeCaughtThat2/with_replies",
+        "https://x.com/search?q=from%3AEyeCaughtThat2&src=typed_query&f=live",
+        "https://x.com/EyeCaughtThat2",
+        "https://x.com/EyeCaughtThat2/with_replies",
+        "https://x.com/search?q=from%3AEyeCaughtThat2&src=typed_query&f=live"
+      ]
+    },
+    "attempt_time": "2026-03-23T10:59:39.282918"
+  },
+  {
+    "timestamp": "2026-03-23T11:03:08.302683",
+    "account_uuid": "8d11dbfb-cdd8-4db7-9830-8ee115748e52",
+    "account_nickname": "EyeCatcher",
+    "action": "post_attempt",
+    "status": "skipped",
+    "using_fallback_profile": false,
+    "reason": "recent_failure:19s",
+    "attempt_time": "2026-03-23T11:03:08.296993"
+  },
+  {
+    "timestamp": "2026-03-23T11:09:28.988651",
+    "account_uuid": "8d11dbfb-cdd8-4db7-9830-8ee115748e52",
+    "account_nickname": "EyeCatcher",
+    "action": "post_attempt",
+    "status": "failed",
+    "using_fallback_profile": false,
+    "reason": "unverified",
+    "text_snippet": "Your brains process emotions 6x faster than logic, yet we're often told to prior",
+    "permalink_debug": {
+      "expected_handle": "eyecaughtthat2",
+      "compose_candidates": 5,
+      "compose_matching_candidates": 0,
+      "compose_samples": [
+        "https://x.com/elonmusk/status/2035524384723554495",
+        "https://x.com/En_chinaNews/status/2035909427954413622",
+        "https://x.com/i/status/1572239289794060288",
+        "https://x.com/faavoredsoul/status/2035803509505802373",
+        "https://x.com/9GAG/status/2035416650556584055"
+      ],
+      "profile_candidates": 0,
+      "timeline_items": 0,
+      "match_method": "",
+      "pages_tried": [
+        "https://x.com/EyeCaughtThat2",
+        "https://x.com/EyeCaughtThat2/with_replies",
+        "https://x.com/search?q=from%3AEyeCaughtThat2&src=typed_query&f=live",
+        "https://x.com/EyeCaughtThat2",
+        "https://x.com/EyeCaughtThat2/with_replies",
+        "https://x.com/search?q=from%3AEyeCaughtThat2&src=typed_query&f=live",
+        "https://x.com/EyeCaughtThat2",
+        "https://x.com/EyeCaughtThat2/with_replies",
+        "https://x.com/search?q=from%3AEyeCaughtThat2&src=typed_query&f=live",
+        "https://x.com/EyeCaughtThat2",
+        "https://x.com/EyeCaughtThat2/with_replies",
+        "https://x.com/search?q=from%3AEyeCaughtThat2&src=typed_query&f=live",
+        "https://x.com/EyeCaughtThat2",
+        "https://x.com/EyeCaughtThat2/with_replies",
+        "https://x.com/search?q=from%3AEyeCaughtThat2&src=typed_query&f=live"
+      ]
+    },
+    "attempt_time": "2026-03-23T11:06:40.219415"
+  },
+  {
+    "timestamp": "2026-03-23T11:16:29.839320",
+    "account_uuid": "8d11dbfb-cdd8-4db7-9830-8ee115748e52",
+    "account_nickname": "EyeCatcher",
+    "action": "post_attempt",
+    "status": "pending",
+    "using_fallback_profile": false,
+    "reason": "unverified",
+    "text_snippet": "Did a 5-second delay in eating trigger memories for 80% of people? Research show",
+    "permalink_debug": {
+      "expected_handle": "eyecaughtthat2",
+      "compose_candidates": 5,
+      "compose_matching_candidates": 0,
+      "compose_samples": [
+        "https://x.com/eric_hz143/status/2035751197894729994",
+        "https://x.com/Pakistani__aura/status/2035880569712603619",
+        "https://x.com/faavoredsoul/status/2035803509505802373",
+        "https://x.com/NeverteIImeodd/status/2035894181756088390",
+        "https://x.com/i/status/1958392361408761987"
+      ],
+      "profile_candidates": 0,
+      "timeline_items": 0,
+      "match_method": "",
+      "pages_tried": [
+        "https://x.com/EyeCaughtThat2",
+        "https://x.com/EyeCaughtThat2/with_replies",
+        "https://x.com/search?q=from%3AEyeCaughtThat2&src=typed_query&f=live",
+        "https://x.com/EyeCaughtThat2",
+        "https://x.com/EyeCaughtThat2/with_replies",
+        "https://x.com/search?q=from%3AEyeCaughtThat2&src=typed_query&f=live",
+        "https://x.com/EyeCaughtThat2",
+        "https://x.com/EyeCaughtThat2/with_replies",
+        "https://x.com/search?q=from%3AEyeCaughtThat2&src=typed_query&f=live",
+        "https://x.com/EyeCaughtThat2",
+        "https://x.com/EyeCaughtThat2/with_replies",
+        "https://x.com/search?q=from%3AEyeCaughtThat2&src=typed_query&f=live",
+        "https://x.com/EyeCaughtThat2",
+        "https://x.com/EyeCaughtThat2/with_replies",
+        "https://x.com/search?q=from%3AEyeCaughtThat2&src=typed_query&f=live"
+      ]
+    },
+    "attempt_time": "2026-03-23T11:13:41.022633"
+  }
+]
