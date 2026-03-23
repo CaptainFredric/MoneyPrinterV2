@@ -48,3 +48,27 @@
 2026-03-22 16:03:58,165 [INFO]   twitter / niche_launch_1 @ ['09:00', '13:00', '19:00']
 2026-03-22 16:03:58,165 [INFO]   twitter / EyeCatcher @ ['10:00', '16:00', '21:00']
 2026-03-22 16:03:58,165 [INFO] Daemon stopped.
+2026-03-22 18:49:57,405 [INFO] ============================================================
+2026-03-22 18:49:57,406 [INFO] MoneyPrinterV2 Daemon starting up
+2026-03-22 18:49:57,406 [INFO] Root:      /Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2
+2026-03-22 18:49:57,406 [INFO] Headless:  False
+2026-03-22 18:49:57,406 [INFO] Dry-run:   False
+2026-03-22 18:49:57,406 [INFO] ============================================================
+2026-03-22 19:00:14,259 [INFO] ▶  Starting job: twitter/niche_launch_1
+2026-03-22 19:00:27,695 [INFO] ▶  Starting job: twitter/niche_launch_1
+2026-03-22 19:01:14,703 [ERROR] ❌ Job exited with code 1: twitter/niche_launch_1
+2026-03-22 19:02:45,896 [INFO] ℹ️ Initializing Twitter...
+2026-03-22 19:02:45,898 [INFO] ℹ️ Selected post mode: link
+2026-03-22 19:02:45,898 [INFO] ℹ️ Generating a post...
+2026-03-22 19:02:45,898 [INFO] ℹ️ Tweet length: 204 chars
+2026-03-22 19:02:45,898 [INFO] => Posting to Twitter: Did you know that the Eisenhower Matrix can help y...
+2026-03-22 19:02:45,898 [INFO] ❌ Twitter post failed: Could not find tweet text box. Ensure you are logged into X in this Firefox profile.
+2026-03-22 19:02:45,898 [ERROR] ❌ Job exited with code 1: twitter/niche_launch_1
+2026-03-22 19:23:04,857 [INFO] Received signal 15 — shutting down after current tick.
+2026-03-22 19:23:17,650 [INFO] Daemon stopped.
+2026-03-22 19:23:17,929 [INFO] ============================================================
+2026-03-22 19:23:17,929 [INFO] MoneyPrinterV2 Daemon starting up
+2026-03-22 19:23:17,929 [INFO] Root:      /Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2
+2026-03-22 19:23:17,929 [INFO] Headless:  False
+2026-03-22 19:23:17,929 [INFO] Dry-run:   False
+2026-03-22 19:23:17,929 [INFO] ============================================================

@@ -18,7 +18,7 @@ from config import *
 from status import *
 from llm_provider import generate_text
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 from termcolor import colored
 from selenium import webdriver
 from selenium.common.exceptions import WebDriverException
@@ -146,6 +146,12 @@ class Twitter:
         existing_posts = self.get_posts()
         post_mode = "text"
         media_path: Optional[str] = None
+
+        session_status = self.check_session()
+        if not session_status.get("ready", False):
+            reason = session_status.get("reason", "session-not-ready")
+            warning(f"X session not ready for posting: {reason}")
+            return f"failed:{reason}"
 
         if text is not None:
             post_content = text
@@ -275,12 +281,18 @@ class Twitter:
         except Exception:
             time.sleep(2)  # Non-fatal fallback
 
-        # Add the post to the cache
         post_urls = self._extract_urls(body)
         post_category = self._infer_category_from_text(body)
         citation_source = self._extract_citation_source(body)
         angle_signature = self._extract_angle_signature(body, post_category)
         tweet_url = self._resolve_post_permalink(body)
+        if not tweet_url:
+            error(
+                "X accepted the compose action, but the new post could not be verified on the account timeline. "
+                "Not saving this run to cache."
+            )
+            return "failed:unverified"
+
         resolved_format = "media" if media_path and post_mode == "media" else ("link" if post_urls else "text")
         self.add_post(
             {
@@ -291,18 +303,105 @@ class Twitter:
                 "citation_source": citation_source,
                 "angle_signature": angle_signature,
                 "tweet_url": tweet_url,
-                "post_verified": bool(tweet_url),
+                "post_verified": True,
             }
         )
 
         self._record_angle_signature(angle_signature, post_category)
 
-        if tweet_url:
-            success(f"Posted to Twitter successfully! URL: {tweet_url}")
-        else:
-            success("Posted to Twitter successfully!")
-            warning("Posted, but could not verify permalink from UI. Check account timeline if needed.")
+        success(f"Posted to Twitter successfully! URL: {tweet_url}")
         return "posted"
+
+    def _media_state_path(self) -> str:
+        """
+        Returns path to media generation state file.
+
+        Returns:
+            path (str): Absolute JSON path
+        """
+        return os.path.join(ROOT_DIR, ".mp", "twitter_media_state.json")
+
+    def _load_media_state(self) -> dict:
+        """
+        Loads media generation state from disk.
+
+        Returns:
+            state (dict): Persisted state
+        """
+        path = self._media_state_path()
+        if not os.path.exists(path):
+            return {"accounts": {}}
+
+        try:
+            with open(path, "r") as file:
+                parsed = json.load(file)
+            if isinstance(parsed, dict):
+                return parsed
+        except Exception:
+            pass
+
+        return {"accounts": {}}
+
+    def _save_media_state(self, state: dict) -> None:
+        """
+        Saves media generation state atomically.
+
+        Args:
+            state (dict): State payload
+        """
+        path = self._media_state_path()
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        tmp_path = path + ".tmp"
+        with open(tmp_path, "w") as file:
+            json.dump(state, file, indent=4)
+        os.replace(tmp_path, path)
+
+    def _is_media_generation_temporarily_disabled(self) -> bool:
+        """
+        Returns True when media generation is in cooldown for this account.
+
+        Returns:
+            disabled (bool): Whether media generation should be skipped
+        """
+        state = self._load_media_state()
+        entry = state.get("accounts", {}).get(self.account_uuid, {})
+        until_raw = str(entry.get("disabled_until", "")).strip()
+        if not until_raw:
+            return False
+
+        try:
+            disabled_until = datetime.fromisoformat(until_raw)
+        except Exception:
+            return False
+
+        return datetime.now() < disabled_until
+
+    def _record_media_generation_failure(self, reason: str, hours: int = 12) -> None:
+        """
+        Records a temporary media generation cooldown for this account.
+
+        Args:
+            reason (str): Human-readable reason
+            hours (int): Cooldown duration
+        """
+        state = self._load_media_state()
+        accounts = state.setdefault("accounts", {})
+        accounts[self.account_uuid] = {
+            "disabled_until": (datetime.now() + timedelta(hours=hours)).isoformat(timespec="seconds"),
+            "reason": reason,
+            "updated_at": datetime.now().isoformat(timespec="seconds"),
+        }
+        self._save_media_state(state)
+
+    def _clear_media_generation_failure(self) -> None:
+        """
+        Clears media generation cooldown for this account.
+        """
+        state = self._load_media_state()
+        accounts = state.get("accounts", {})
+        if self.account_uuid in accounts:
+            del accounts[self.account_uuid]
+            self._save_media_state(state)
 
     def _canonical_status_url(self, url: str) -> str:
         """
@@ -352,6 +451,18 @@ class Twitter:
 
         return candidates
 
+    def _timeline_url_for_handle(self, handle: str) -> str:
+        """
+        Builds canonical profile timeline URL.
+
+        Args:
+            handle (str): Username without @
+
+        Returns:
+            url (str): Timeline URL
+        """
+        return f"https://x.com/{handle}"
+
     def _resolve_account_handle(self) -> str:
         """
         Resolves currently logged-in account handle from profile nav links.
@@ -375,7 +486,261 @@ class Twitter:
             except Exception:
                 continue
 
-        return ""
+        return self._configured_account_handle()
+
+    def get_live_account_handle(self) -> str:
+        """
+        Public wrapper to resolve the current logged-in handle.
+
+        Returns:
+            handle (str): Username without @, or empty string
+        """
+        return self._resolve_account_handle()
+
+    def check_session(self) -> dict:
+        """
+        Checks whether the Firefox profile is ready to post on X.
+
+        Returns:
+            status (dict): Readiness details
+        """
+        compose_url = "https://x.com/compose/post"
+        text_box_selectors = [
+            (By.CSS_SELECTOR, "div[data-testid='tweetTextarea_0'][role='textbox']"),
+            (By.XPATH, "//div[@data-testid='tweetTextarea_0']//div[@role='textbox']"),
+            (By.XPATH, "//div[@role='textbox']"),
+        ]
+
+        self.browser.get(compose_url)
+        time.sleep(2)
+        current_url = self.browser.current_url
+
+        for selector in text_box_selectors:
+            try:
+                self.browser.find_element(*selector)
+                return {
+                    "ready": True,
+                    "reason": "ready",
+                    "current_url": current_url,
+                    "handle": self.get_live_account_handle(),
+                }
+            except Exception:
+                continue
+
+        lowered_url = current_url.lower()
+        if any(token in lowered_url for token in ("/i/flow/login", "/login", "/signup")):
+            return {
+                "ready": False,
+                "reason": "login-required",
+                "current_url": current_url,
+                "handle": self.get_live_account_handle(),
+            }
+
+        login_selectors = [
+            (By.NAME, "text"),
+            (By.XPATH, "//span[text()='Sign in']"),
+            (By.XPATH, "//span[text()='Log in']"),
+        ]
+        for selector in login_selectors:
+            try:
+                self.browser.find_element(*selector)
+                return {
+                    "ready": False,
+                    "reason": "login-required",
+                    "current_url": current_url,
+                    "handle": self.get_live_account_handle(),
+                }
+            except Exception:
+                continue
+
+        return {
+            "ready": False,
+            "reason": "compose-ui-missing",
+            "current_url": current_url,
+            "handle": self.get_live_account_handle(),
+        }
+
+    def _collect_timeline_posts(self, handle: str, limit: int = 5) -> list[dict]:
+        """
+        Collects visible posts from the account timeline.
+
+        Args:
+            handle (str): Username without @
+            limit (int): Number of timeline items to return
+
+        Returns:
+            posts (list[dict]): Timeline post previews with text and URL
+        """
+        self.browser.get(self._timeline_url_for_handle(handle))
+        time.sleep(3)
+
+        posts: list[dict] = []
+        seen_urls: set[str] = set()
+        anchors = self.browser.find_elements(By.XPATH, "//a[contains(@href, '/status/')]")
+
+        for anchor in anchors[: max(limit * 8, 20)]:
+            canonical_url = ""
+            href = anchor.get_attribute("href") or ""
+            canonical = self._canonical_status_url(href)
+            if canonical:
+                canonical_url = canonical
+
+            if canonical_url and canonical_url in seen_urls:
+                continue
+
+            try:
+                article = anchor.find_element(By.XPATH, "ancestor::article[1]")
+                article_text = (article.text or "").strip()
+            except Exception:
+                article_text = (anchor.text or "").strip()
+
+            if canonical_url:
+                seen_urls.add(canonical_url)
+
+            if not article_text and not canonical_url:
+                continue
+
+            posts.append(
+                {
+                    "text": article_text,
+                    "normalized_text": self._normalize_tweet(article_text),
+                    "tweet_url": canonical_url,
+                }
+            )
+
+            if len(posts) >= limit:
+                break
+
+        return posts
+
+    def _cache_update_post_verification(self, target_post: dict, tweet_url: str, verified: bool) -> None:
+        """
+        Updates cached metadata for a previously stored post.
+
+        Args:
+            target_post (dict): Cached post to update
+            tweet_url (str): Resolved canonical tweet URL
+            verified (bool): Verification flag
+        """
+        cache_path = get_twitter_cache_path()
+
+        try:
+            with open(cache_path, "r") as file:
+                parsed = json.load(file)
+        except (json.JSONDecodeError, OSError):
+            return
+
+        updated = False
+        for account in parsed.get("accounts", []):
+            if account.get("id") != self.account_uuid:
+                continue
+            posts = account.get("posts", [])
+            for cached_post in reversed(posts):
+                if (
+                    cached_post.get("date") == target_post.get("date")
+                    and cached_post.get("content") == target_post.get("content")
+                ):
+                    cached_post["post_verified"] = verified
+                    if tweet_url:
+                        cached_post["tweet_url"] = tweet_url
+                    updated = True
+                    break
+            break
+
+        if not updated:
+            return
+
+        tmp_path = cache_path + ".tmp"
+        with open(tmp_path, "w") as file:
+            json.dump(parsed, file, indent=4)
+        os.replace(tmp_path, cache_path)
+
+    def verify_recent_cached_posts(self, limit: int = 3, backfill: bool = True) -> dict:
+        """
+        Verifies recent cached posts against the live account timeline.
+
+        Args:
+            limit (int): Number of most recent cached posts to verify
+            backfill (bool): Whether to persist recovered permalinks
+
+        Returns:
+            result (dict): Verification summary
+        """
+        cached_posts = self.get_posts()
+        recent_cached = cached_posts[-limit:] if limit > 0 else []
+        handle = self.get_live_account_handle()
+        if not handle:
+            return {
+                "account": self.account_nickname,
+                "handle": "",
+                "verified_count": 0,
+                "checked_count": len(recent_cached),
+                "results": [],
+                "error": "Could not resolve logged-in X handle from browser profile.",
+            }
+
+        try:
+            live_posts = self._collect_timeline_posts(handle, limit=max(limit + 2, 5))
+        except Exception as exc:
+            return {
+                "account": self.account_nickname,
+                "handle": handle,
+                "verified_count": 0,
+                "checked_count": len(recent_cached),
+                "results": [],
+                "error": f"Timeline verification failed: {exc}",
+            }
+
+        results: list[dict] = []
+        verified_count = 0
+        for cached_post in reversed(recent_cached):
+            cached_url = self._canonical_status_url(str(cached_post.get("tweet_url", "")))
+            cached_norm = self._normalize_tweet(cached_post.get("content", ""))
+            match_url = ""
+            match_method = ""
+
+            for live_post in live_posts:
+                live_url = live_post.get("tweet_url", "")
+                live_norm = live_post.get("normalized_text", "")
+
+                if cached_url and live_url and cached_url == live_url:
+                    match_url = live_url
+                    match_method = "permalink"
+                    break
+
+                if not cached_norm or not live_norm:
+                    continue
+
+                similarity = SequenceMatcher(None, cached_norm, live_norm).ratio()
+                if similarity >= 0.88 or cached_norm[:90] in live_norm:
+                    match_url = live_url
+                    match_method = "timeline-text"
+                    break
+
+            verified = bool(match_url)
+            if verified:
+                verified_count += 1
+                if backfill:
+                    self._cache_update_post_verification(cached_post, match_url, True)
+
+            results.append(
+                {
+                    "date": cached_post.get("date", ""),
+                    "preview": (cached_post.get("content", "") or "")[:90],
+                    "verified": verified,
+                    "tweet_url": match_url or cached_url,
+                    "match_method": match_method,
+                }
+            )
+
+        return {
+            "account": self.account_nickname,
+            "handle": handle,
+            "verified_count": verified_count,
+            "checked_count": len(recent_cached),
+            "results": results,
+            "error": "",
+        }
 
     def _resolve_post_permalink(self, posted_text: str) -> str:
         """
@@ -400,22 +765,16 @@ class Twitter:
             return ""
 
         try:
-            self.browser.get(f"https://x.com/{handle}")
-            self.wait.until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "article[data-testid='tweet']"))
-            )
-
-            articles = self.browser.find_elements(By.CSS_SELECTOR, "article[data-testid='tweet']")
-            for article in articles[:5]:
-                article_text = self._normalize_tweet(article.text or "")
-                if normalized_target and article_text and normalized_target[:80] not in article_text:
-                    continue
-                links = article.find_elements(By.XPATH, ".//a[contains(@href, '/status/')]")
-                for link in links:
-                    href = link.get_attribute("href") or ""
-                    canonical = self._canonical_status_url(href)
-                    if canonical:
-                        return canonical
+            live_posts = self._collect_timeline_posts(handle, limit=6)
+            for live_post in live_posts:
+                live_norm = live_post.get("normalized_text", "")
+                if normalized_target and live_norm and normalized_target[:80] not in live_norm:
+                    similarity = SequenceMatcher(None, normalized_target, live_norm).ratio()
+                    if similarity < 0.88:
+                        continue
+                canonical = live_post.get("tweet_url", "")
+                if canonical:
+                    return canonical
         except Exception:
             return ""
 
@@ -591,6 +950,23 @@ class Twitter:
             cleaned.append(link)
 
         return cleaned
+
+    def _configured_account_handle(self) -> str:
+        """
+        Returns account handle from cache settings when available.
+
+        Returns:
+            handle (str): Username without @, or empty string
+        """
+        account = self._get_account_settings()
+        for key in ("x_username", "username", "handle"):
+            value = str(account.get(key, "")).strip()
+            if not value:
+                continue
+            value = value.lstrip("@").strip()
+            if re.match(r"^[A-Za-z0-9_]{1,15}$", value):
+                return value
+        return ""
 
     def _extract_source_label_from_url(self, url: str) -> str:
         """
@@ -954,7 +1330,7 @@ class Twitter:
         Returns:
             available (bool): True when an API key is configured
         """
-        return bool(get_nanobanana2_api_key())
+        return bool(get_nanobanana2_api_key()) and not self._is_media_generation_temporarily_disabled()
 
     def _should_try_media_post(self, posts: List[dict]) -> bool:
         """
@@ -1074,7 +1450,17 @@ class Twitter:
                         path = os.path.join(ROOT_DIR, ".mp", f"{uuid4()}.png")
                         with open(path, "wb") as image_file:
                             image_file.write(image_bytes)
+                        self._clear_media_generation_failure()
                         return path
+        except requests.HTTPError as exc:
+            status_code = exc.response.status_code if exc.response is not None else 0
+            if 400 <= status_code < 500:
+                self._record_media_generation_failure(
+                    f"HTTP {status_code} from media generation endpoint",
+                    hours=12,
+                )
+            if get_verbose():
+                warning(f"Media image generation failed: {exc}")
         except Exception as exc:
             if get_verbose():
                 warning(f"Media image generation failed: {exc}")
@@ -1619,6 +2005,16 @@ class Twitter:
             else self._should_try_source_citation(existing_posts)
         )
         rejection_reasons: list[str] = []
+        best_soft_candidate = ""
+        best_soft_reasons: list[str] = []
+
+        def _consider_soft_candidate(candidate: str, reasons: list[str]) -> None:
+            nonlocal best_soft_candidate, best_soft_reasons
+            if not candidate or not reasons:
+                return
+            if not best_soft_candidate or len(reasons) < len(best_soft_reasons):
+                best_soft_candidate = candidate
+                best_soft_reasons = list(reasons)
 
         for attempt in range(5):
             try:
@@ -1643,12 +2039,10 @@ class Twitter:
                 sys.exit(1)
 
             cleaned = self._clean_tweet(completion)
+            soft_rejections: list[str] = []
 
             if not self._has_strong_hook(cleaned):
-                rejection_reasons.append(
-                    f"Attempt {attempt + 1}: weak opening hook"
-                )
-                continue
+                soft_rejections.append("weak opening hook")
 
             if self._is_too_similar_to_recent(cleaned, existing_posts):
                 rejection_reasons.append(
@@ -1658,24 +2052,15 @@ class Twitter:
 
             opening_signature = self._opening_signature(cleaned)
             if opening_signature and opening_signature in recent_openings:
-                rejection_reasons.append(
-                    f"Attempt {attempt + 1}: opening too similar to recent hooks"
-                )
-                continue
+                soft_rejections.append("opening too similar to recent hooks")
 
             candidate_hashtags = self._extract_hashtags(cleaned)
             if candidate_hashtags and len(candidate_hashtags & recent_hashtags) >= 2:
-                rejection_reasons.append(
-                    f"Attempt {attempt + 1}: reusing too many recent hashtags"
-                )
-                continue
+                soft_rejections.append("reusing too many recent hashtags")
 
             cta_signature = self._cta_signature(cleaned)
             if cta_signature and cta_signature in recent_cta_signatures:
-                rejection_reasons.append(
-                    f"Attempt {attempt + 1}: CTA ending too repetitive"
-                )
-                continue
+                soft_rejections.append("CTA ending too repetitive")
 
             candidate_urls = self._extract_urls(cleaned)
             if candidate_urls:
@@ -1728,19 +2113,20 @@ class Twitter:
                 category = self._infer_category_from_text(cleaned)
                 can_rotate = len(set(category_pool) - recent_category_set) > 0
                 if attempt < 4 and can_rotate and category in recent_category_set:
-                    rejection_reasons.append(
-                        f"Attempt {attempt + 1}: category '{category}' repeated too soon"
-                    )
-                    continue
+                    soft_rejections.append(f"category '{category}' repeated too soon")
 
             angle_signature = self._extract_angle_signature(
                 cleaned,
                 self._infer_category_from_text(cleaned),
             )
             if angle_signature and angle_signature in recent_angles and attempt < 4:
+                soft_rejections.append("angle reused from monthly memory")
+
+            if soft_rejections:
                 rejection_reasons.append(
-                    f"Attempt {attempt + 1}: angle reused from monthly memory"
+                    f"Attempt {attempt + 1}: {'; '.join(soft_rejections)}"
                 )
+                _consider_soft_candidate(cleaned, soft_rejections)
                 continue
 
             if get_verbose():
@@ -1751,6 +2137,15 @@ class Twitter:
         if rejection_reasons and get_verbose():
             for reason in rejection_reasons:
                 warning(reason)
+
+        if best_soft_candidate:
+            warning(
+                "Using best available post after quality filters rejected stronger variants. "
+                f"Soft issues: {', '.join(best_soft_reasons)}"
+            )
+            if get_verbose():
+                info(f"Tweet length: {len(best_soft_candidate)} chars")
+            return best_soft_candidate
 
         error("Failed to generate a strong, non-duplicate post. Please try again.")
         sys.exit(1)

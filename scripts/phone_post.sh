@@ -14,6 +14,11 @@
 #   phone_post.sh status       → show status report (no browser, instant)
 #   phone_post.sh performance  → show linear growth phase + next objective
 #   phone_post.sh next         → run linear next-step sequence (performance + autotune preview + status)
+#   phone_post.sh login <id>   → open the exact Firefox profile for X login repair
+#   phone_post.sh session <id> → check whether the X session/profile is ready to post
+#   phone_post.sh session-all  → check X session readiness for all accounts
+#   phone_post.sh verify <id>  → verify recent cached posts against live X timeline
+#   phone_post.sh verify-all   → verify recent cached posts for all accounts
 #   phone_post.sh autotune      → preview ratio tuning changes (dry-run)
 #   phone_post.sh autotune-apply→ apply ratio tuning changes
 #   phone_post.sh autotune-unlocked-apply → apply tuning without phase lock (advanced)
@@ -44,7 +49,7 @@ TARGET="${2:-all}"
 
 run_post_foreground() {
     local target="$1"
-    "$VENV_PYTHON" scripts/run_once.py twitter "$target" --headless
+    "$VENV_PYTHON" scripts/run_once.py twitter "$target"
 }
 
 run_post_detached() {
@@ -70,6 +75,21 @@ case "$MODE" in
         ;;
     performance)
         "$VENV_PYTHON" scripts/performance_report.py
+        ;;
+    login)
+        "$VENV_PYTHON" scripts/open_x_login.py "$TARGET"
+        ;;
+    session)
+        "$VENV_PYTHON" scripts/check_x_session.py "$TARGET"
+        ;;
+    session-all)
+        "$VENV_PYTHON" scripts/check_x_session.py all
+        ;;
+    verify)
+        "$VENV_PYTHON" scripts/verify_twitter_posts.py "$TARGET"
+        ;;
+    verify-all)
+        "$VENV_PYTHON" scripts/verify_twitter_posts.py all
         ;;
     next)
         "$VENV_PYTHON" scripts/performance_report.py
