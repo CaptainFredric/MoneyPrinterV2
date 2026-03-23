@@ -71,3 +71,29 @@ Accounts checked : 1
 Pending checked  : 5
 Backfilled total : 0
 [idle] Sleeping 19 minute(s) before next cycle.
+[idle] Cycle 3 started at 2026-03-23T18:36:56
+▶ Smart attempt: niche_launch_1
+ℹ️ Initializing Twitter...
+⚠️ X session not ready for posting: login-required
+MPV2_POST_STATUS:failed:login-required
+❌ Twitter post verification failed: failed:login-required
+MPV2_SMART_STATUS:niche_launch_1:skipped
+Smart attempts: 1 | posted: 0
+========================================================================
+Account : niche_launch_1
+Checked : 3
+Verified: 0
+Error   : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Verified posts   : 0
+========================================================================
+Account : niche_launch_1
+Pending Checked : 6
+Backfilled OK   : 0
+Error          : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Pending checked  : 6
+Backfilled total : 0
+[idle] Sleeping 20 minute(s) before next cycle.
