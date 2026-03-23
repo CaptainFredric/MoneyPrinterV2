@@ -81,8 +81,8 @@ class Twitter:
         self.options.add_argument("-profile")
         self.options.add_argument(fp_profile_path)
 
-        # Set the service
-        self.service: Service = Service(GeckoDriverManager().install())
+        # Set the service (prefer local/cached geckodriver for offline resilience)
+        self.service: Service = Service(self._resolve_geckodriver_path())
 
         # Initialize the browser
         try:
@@ -115,6 +115,35 @@ class Twitter:
             self.browser = webdriver.Firefox(service=self.service, options=self.options)
 
         self.wait: WebDriverWait = WebDriverWait(self.browser, 30)
+
+    def _resolve_geckodriver_path(self) -> str:
+        """
+        Resolves geckodriver path with offline-first behavior.
+
+        Resolution order:
+        1) `GECKODRIVER_PATH` env var (if valid)
+        2) local webdriver-manager cache under `~/.wdm`
+        3) webdriver-manager online install
+
+        Returns:
+            path (str): geckodriver executable path
+        """
+        env_path = os.environ.get("GECKODRIVER_PATH", "").strip()
+        if env_path and os.path.isfile(env_path) and os.access(env_path, os.X_OK):
+            return env_path
+
+        cached_root = os.path.expanduser("~/.wdm/drivers/geckodriver/mac64")
+        if os.path.isdir(cached_root):
+            try:
+                version_dirs = sorted(os.listdir(cached_root), reverse=True)
+                for version in version_dirs:
+                    candidate = os.path.join(cached_root, version, "geckodriver")
+                    if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+                        return candidate
+            except Exception:
+                pass
+
+        return GeckoDriverManager().install()
 
     def post(self, text: Optional[str] = None) -> str:
         """
@@ -642,15 +671,6 @@ class Twitter:
         Returns:
             status (dict): Readiness details
         """
-        if self.using_fallback_profile:
-            return {
-                "ready": False,
-                "reason": "profile-in-use",
-                "current_url": "",
-                "handle": "",
-                "configured_handle": (self._configured_account_handle() or "").strip().lstrip("@"),
-            }
-
         compose_url = self._home_url()
         text_box_selectors = [
             (By.CSS_SELECTOR, "div[data-testid='tweetTextarea_0'][role='textbox']"),
@@ -702,14 +722,16 @@ class Twitter:
                         "current_url": self.browser.current_url,
                         "handle": live_handle,
                         "configured_handle": configured_handle,
+                        "using_fallback_profile": self.using_fallback_profile,
                     }
 
                 return {
                     "ready": True,
-                    "reason": "ready",
+                    "reason": "ready-fallback" if self.using_fallback_profile else "ready",
                     "current_url": current_url,
                     "handle": live_handle,
                     "configured_handle": configured_handle,
+                    "using_fallback_profile": self.using_fallback_profile,
                 }
             except Exception:
                 continue
@@ -721,6 +743,7 @@ class Twitter:
                 "reason": "login-required",
                 "current_url": current_url,
                 "handle": self.get_live_account_handle(),
+                "using_fallback_profile": self.using_fallback_profile,
             }
 
         login_selectors = [
@@ -736,6 +759,7 @@ class Twitter:
                     "reason": "login-required",
                     "current_url": current_url,
                     "handle": self.get_live_account_handle(),
+                    "using_fallback_profile": self.using_fallback_profile,
                 }
             except Exception:
                 continue
@@ -787,10 +811,11 @@ class Twitter:
 
             return {
                 "ready": True,
-                "reason": "ready-ui-fallback",
+                "reason": "ready-ui-fallback-fallback-profile" if self.using_fallback_profile else "ready-ui-fallback",
                 "current_url": current_url,
                 "handle": live_handle,
                 "configured_handle": configured_handle,
+                "using_fallback_profile": self.using_fallback_profile,
             }
 
         return {
@@ -798,6 +823,7 @@ class Twitter:
             "reason": "compose-ui-missing",
             "current_url": current_url,
             "handle": self.get_live_account_handle(),
+            "using_fallback_profile": self.using_fallback_profile,
         }
 
     def _log_transaction(self, action: str, status: str, metadata: Optional[dict] = None) -> None:
