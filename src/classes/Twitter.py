@@ -11,7 +11,7 @@ import platform
 from difflib import SequenceMatcher
 from uuid import uuid4
 import requests
-from urllib.parse import urlparse
+from urllib.parse import quote_plus, urlparse
 
 from cache import *
 from config import *
@@ -630,6 +630,59 @@ class Twitter:
             except Exception:
                 continue
 
+        # UI fallback: some layouts hide compose textbox until an interaction,
+        # but still expose logged-in nav + compose entry points.
+        compose_entry_selectors = [
+            (By.CSS_SELECTOR, "a[data-testid='SideNav_NewTweet_Button']"),
+            (By.CSS_SELECTOR, "button[data-testid='SideNav_NewTweet_Button']"),
+            (By.CSS_SELECTOR, "a[href='/compose/post']"),
+            (By.XPATH, "//a[contains(@href,'/compose/post') and @role='link']"),
+        ]
+        shell_selectors = [
+            (By.CSS_SELECTOR, "nav[aria-label='Primary']"),
+            (By.CSS_SELECTOR, "header[role='banner']"),
+            (By.CSS_SELECTOR, "a[data-testid='AppTabBar_Home_Link']"),
+        ]
+
+        has_compose_entry = False
+        for selector in compose_entry_selectors:
+            try:
+                self.browser.find_element(*selector)
+                has_compose_entry = True
+                break
+            except Exception:
+                continue
+
+        has_logged_shell = False
+        for selector in shell_selectors:
+            try:
+                self.browser.find_element(*selector)
+                has_logged_shell = True
+                break
+            except Exception:
+                continue
+
+        if has_compose_entry or has_logged_shell:
+            live_handle = (self.get_live_account_handle() or "").strip().lstrip("@")
+            configured_handle = (self._configured_account_handle() or "").strip().lstrip("@")
+
+            if configured_handle and live_handle and live_handle.lower() != configured_handle.lower():
+                return {
+                    "ready": False,
+                    "reason": "handle-mismatch",
+                    "current_url": current_url,
+                    "handle": live_handle,
+                    "configured_handle": configured_handle,
+                }
+
+            return {
+                "ready": True,
+                "reason": "ready-ui-fallback",
+                "current_url": current_url,
+                "handle": live_handle,
+                "configured_handle": configured_handle,
+            }
+
         return {
             "ready": False,
             "reason": "compose-ui-missing",
@@ -910,13 +963,13 @@ class Twitter:
 
         return posts
 
-    def _cache_update_post_verification(self, target_post: dict, tweet_url: str, verified: bool) -> None:
+    def _cache_update_post_verification(self, target_post: dict, tweet_url: Optional[str], verified: bool) -> None:
         """
         Updates cached metadata for a previously stored post.
 
         Args:
             target_post (dict): Cached post to update
-            tweet_url (str): Resolved canonical tweet URL
+            tweet_url (Optional[str]): Resolved canonical tweet URL; empty clears stale URL
             verified (bool): Verification flag
         """
         cache_path = get_twitter_cache_path()
@@ -938,7 +991,8 @@ class Twitter:
                     and cached_post.get("content") == target_post.get("content")
                 ):
                     cached_post["post_verified"] = verified
-                    if tweet_url:
+                    cached_post["verification_state"] = "verified" if verified else "pending"
+                    if tweet_url is not None:
                         cached_post["tweet_url"] = tweet_url
                     updated = True
                     break
@@ -952,7 +1006,7 @@ class Twitter:
             json.dump(parsed, file, indent=4)
         os.replace(tmp_path, cache_path)
 
-    def verify_recent_cached_posts(self, limit: int = 3, backfill: bool = True) -> dict:
+    def verify_recent_cached_posts(self, limit: int = 3, backfill: bool = True, pending_only: bool = False) -> dict:
         """
         Verifies recent cached posts against the live account timeline.
 
@@ -964,7 +1018,16 @@ class Twitter:
             result (dict): Verification summary
         """
         cached_posts = self.get_posts()
-        recent_cached = cached_posts[-limit:] if limit > 0 else []
+        candidates = cached_posts
+        if pending_only:
+            candidates = [
+                post for post in cached_posts
+                if (not bool(post.get("post_verified", False)))
+                or (str(post.get("verification_state", "")).strip().lower() == "pending")
+                or (not str(post.get("tweet_url", "")).strip())
+            ]
+
+        recent_cached = candidates[-limit:] if limit > 0 else []
         handle = self.get_live_account_handle()
         if not handle:
             return {
@@ -1001,9 +1064,16 @@ class Twitter:
                 live_norm = live_post.get("normalized_text", "")
 
                 if cached_url and live_url and cached_url == live_url:
-                    match_url = live_url
-                    match_method = "permalink"
-                    break
+                    if cached_norm and live_norm:
+                        permalink_similarity = SequenceMatcher(None, cached_norm, live_norm).ratio()
+                        if permalink_similarity >= 0.80 or cached_norm[:90] in live_norm or live_norm[:90] in cached_norm:
+                            match_url = live_url
+                            match_method = "permalink"
+                            break
+                    else:
+                        match_url = live_url
+                        match_method = "permalink"
+                        break
 
                 if not cached_norm or not live_norm:
                     continue
@@ -1014,11 +1084,24 @@ class Twitter:
                     match_method = "timeline-text"
                     break
 
+            if not match_url and cached_norm:
+                recovered = self._resolve_post_permalink_via_search(
+                    handle=handle,
+                    normalized_target=cached_norm,
+                    raw_text=str(cached_post.get("content", "")),
+                    max_queries=2,
+                )
+                if recovered:
+                    match_url = recovered
+                    match_method = "search-text"
+
             verified = bool(match_url)
             if verified:
                 verified_count += 1
                 if backfill:
                     self._cache_update_post_verification(cached_post, match_url, True)
+            elif backfill:
+                self._cache_update_post_verification(cached_post, "", False)
 
             results.append(
                 {
@@ -1038,6 +1121,19 @@ class Twitter:
             "results": results,
             "error": "",
         }
+
+    def verify_pending_cached_posts(self, limit: int = 20, backfill: bool = True) -> dict:
+        """
+        Verifies only pending/unverified cached posts against the live timeline.
+
+        Args:
+            limit (int): Number of pending cached posts to verify
+            backfill (bool): Whether to persist recovered permalinks
+
+        Returns:
+            result (dict): Verification summary
+        """
+        return self.verify_recent_cached_posts(limit=limit, backfill=backfill, pending_only=True)
 
     def _resolve_post_permalink(self, posted_text: str) -> str:
         """
@@ -1060,6 +1156,7 @@ class Twitter:
             "compose_samples": [],
             "profile_candidates": 0,
             "timeline_items": 0,
+            "search_queries_tried": [],
             "match_method": "",
             "pages_tried": [],
         }
@@ -1084,9 +1181,13 @@ class Twitter:
                                 int(self.last_permalink_debug.get("compose_matching_candidates", 0)),
                                 matching_count,
                             )
+                            if self._is_permalink_conflict(candidate, normalized_target):
+                                continue
                             self.last_permalink_debug["match_method"] = "compose-candidates"
                             return candidate
                 else:
+                    if candidates and self._is_permalink_conflict(candidates[0], normalized_target):
+                        continue
                     self.last_permalink_debug["match_method"] = "compose-first"
                     return candidates[0]
             time.sleep(1)
@@ -1152,13 +1253,164 @@ class Twitter:
                     if weak_candidate:
                         time.sleep(1)
                         refreshed = self._collect_status_link_candidates()
-                        if weak_candidate in refreshed:
+                        if weak_candidate in refreshed and not self._is_permalink_conflict(weak_candidate, normalized_target):
                             self.last_permalink_debug["match_method"] = "page-weak"
                             return weak_candidate
         except Exception:
             return ""
 
+        search_match = self._resolve_post_permalink_via_search(
+            handle=handle,
+            normalized_target=normalized_target,
+            raw_text=posted_text,
+            max_queries=3,
+        )
+        if search_match:
+            self.last_permalink_debug["match_method"] = "search-text"
+            return search_match
+
         return ""
+
+    def _build_text_search_urls(self, handle: str, raw_text: str, max_queries: int = 3) -> list[str]:
+        """
+        Builds X live-search URLs likely to surface a recently posted tweet.
+
+        Args:
+            handle (str): Username without @
+            raw_text (str): Original post text
+            max_queries (int): Maximum query URLs to generate
+
+        Returns:
+            urls (list[str]): Candidate search URLs
+        """
+        compact = re.sub(r"\s+", " ", (raw_text or "")).strip()
+        if not compact:
+            return []
+
+        snippets: list[str] = []
+
+        first_words = " ".join(compact.split()[:10]).strip()
+        if first_words:
+            snippets.append(first_words)
+
+        max_chars = 80
+        short_prefix = compact[:max_chars]
+        if len(compact) > max_chars and " " in short_prefix:
+            short_prefix = short_prefix.rsplit(" ", 1)[0]
+        short_prefix = short_prefix.strip()
+        if short_prefix and short_prefix not in snippets:
+            snippets.append(short_prefix)
+
+        urls: list[str] = []
+        for snippet in snippets[:max_queries]:
+            query = f'from:{handle} "{snippet}"'
+            encoded = quote_plus(query)
+            urls.append(f"https://x.com/search?q={encoded}&src=typed_query&f=live")
+
+        return urls[:max_queries]
+
+    def _resolve_post_permalink_via_search(
+        self,
+        handle: str,
+        normalized_target: str,
+        raw_text: str,
+        max_queries: int = 3,
+    ) -> str:
+        """
+        Attempts permalink discovery via text search scoped to account handle.
+
+        Args:
+            handle (str): Username without @
+            normalized_target (str): Normalized target tweet text
+            raw_text (str): Original target tweet text
+            max_queries (int): Maximum live-search queries to try
+
+        Returns:
+            tweet_url (str): Canonical tweet URL if found
+        """
+        if not handle:
+            return ""
+
+        search_urls = self._build_text_search_urls(handle=handle, raw_text=raw_text, max_queries=max_queries)
+        if not search_urls:
+            return ""
+
+        try:
+            for search_url in search_urls:
+                if isinstance(self.last_permalink_debug, dict):
+                    self.last_permalink_debug.setdefault("search_queries_tried", []).append(search_url)
+
+                self.browser.get(search_url)
+                time.sleep(3)
+                try:
+                    self.browser.execute_script("window.scrollTo(0, 1200);")
+                    time.sleep(1)
+                except Exception:
+                    pass
+
+                live_posts = self._collect_timeline_posts_from_current_page(limit=15)
+                if isinstance(self.last_permalink_debug, dict):
+                    self.last_permalink_debug["timeline_items"] = max(
+                        int(self.last_permalink_debug.get("timeline_items", 0)), len(live_posts)
+                    )
+
+                for live_post in live_posts:
+                    live_norm = live_post.get("normalized_text", "")
+                    if normalized_target and live_norm and not self._is_probable_post_match(normalized_target, live_norm):
+                        continue
+                    canonical = live_post.get("tweet_url", "")
+                    if canonical:
+                        return canonical
+
+                status_candidates = self._collect_status_link_candidates()
+                handle_lower = handle.lower()
+                filtered = []
+                for candidate in status_candidates:
+                    match = re.search(r"^https://x\.com/([A-Za-z0-9_]+)/status/\d+$", candidate)
+                    if not match:
+                        continue
+                    if match.group(1).lower() == handle_lower:
+                        filtered.append(candidate)
+
+                if len(filtered) == 1:
+                    if not self._is_permalink_conflict(filtered[0], normalized_target):
+                        return filtered[0]
+        except Exception:
+            return ""
+
+        return ""
+
+    def _is_permalink_conflict(self, candidate_url: str, target_norm: str) -> bool:
+        """
+        Prevents reusing a permalink that is already tied to another cached post.
+
+        Args:
+            candidate_url (str): Candidate tweet permalink
+            target_norm (str): Normalized text for the post being resolved
+
+        Returns:
+            conflict (bool): Whether candidate appears to belong to a different cached post
+        """
+        canonical = self._canonical_status_url(candidate_url)
+        if not canonical:
+            return False
+
+        for cached_post in self.get_posts():
+            cached_url = self._canonical_status_url(str(cached_post.get("tweet_url", "")))
+            if cached_url != canonical:
+                continue
+
+            cached_norm = self._normalize_tweet(str(cached_post.get("content", "")))
+            if not cached_norm or not target_norm:
+                return True
+
+            similarity = SequenceMatcher(None, cached_norm, target_norm).ratio()
+            if similarity >= 0.90 or cached_norm[:80] in target_norm or target_norm[:80] in cached_norm:
+                return False
+
+            return True
+
+        return False
 
     def _is_probable_post_match(self, target_norm: str, live_norm: str) -> bool:
         """

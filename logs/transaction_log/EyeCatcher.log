@@ -230,5 +230,72 @@
       ]
     },
     "attempt_time": "2026-03-23T11:13:41.022633"
+  },
+  {
+    "timestamp": "2026-03-23T15:21:17.966077",
+    "account_uuid": "8d11dbfb-cdd8-4db7-9830-8ee115748e52",
+    "account_nickname": "EyeCatcher",
+    "action": "post_attempt",
+    "status": "pending",
+    "using_fallback_profile": false,
+    "reason": "unverified",
+    "text_snippet": "What if your emotions control your memories? Research suggests that emotions pla",
+    "permalink_debug": {
+      "expected_handle": "eyecaughtthat2",
+      "compose_candidates": 5,
+      "compose_matching_candidates": 0,
+      "compose_samples": [
+        "https://x.com/elonmusk/status/2036168534892376252",
+        "https://x.com/Shenxiao123971/status/2036086738314305732",
+        "https://x.com/maddenifico/status/2036082145626554423",
+        "https://x.com/i/status/2035790567439823105",
+        "https://x.com/OyyNxx/status/2036023219870912742"
+      ],
+      "profile_candidates": 0,
+      "timeline_items": 0,
+      "search_queries_tried": [
+        "https://x.com/search?q=from%3AEyeCaughtThat2+%22What+if+your+emotions+control+your+memories%3F+Research+suggests+that%22&src=typed_query&f=live",
+        "https://x.com/search?q=from%3AEyeCaughtThat2+%22What+if+your+emotions+control+your+memories%3F+Research+suggests+that+emotions%22&src=typed_query&f=live"
+      ],
+      "match_method": "",
+      "pages_tried": [
+        "https://x.com/EyeCaughtThat2",
+        "https://x.com/EyeCaughtThat2/with_replies",
+        "https://x.com/search?q=from%3AEyeCaughtThat2&src=typed_query&f=live",
+        "https://x.com/EyeCaughtThat2",
+        "https://x.com/EyeCaughtThat2/with_replies",
+        "https://x.com/search?q=from%3AEyeCaughtThat2&src=typed_query&f=live",
+        "https://x.com/EyeCaughtThat2",
+        "https://x.com/EyeCaughtThat2/with_replies",
+        "https://x.com/search?q=from%3AEyeCaughtThat2&src=typed_query&f=live",
+        "https://x.com/EyeCaughtThat2",
+        "https://x.com/EyeCaughtThat2/with_replies",
+        "https://x.com/search?q=from%3AEyeCaughtThat2&src=typed_query&f=live",
+        "https://x.com/EyeCaughtThat2",
+        "https://x.com/EyeCaughtThat2/with_replies",
+        "https://x.com/search?q=from%3AEyeCaughtThat2&src=typed_query&f=live"
+      ]
+    },
+    "attempt_time": "2026-03-23T15:18:20.483512"
+  },
+  {
+    "timestamp": "2026-03-23T15:26:44.855314",
+    "account_uuid": "8d11dbfb-cdd8-4db7-9830-8ee115748e52",
+    "account_nickname": "EyeCatcher",
+    "action": "post_attempt",
+    "status": "skipped",
+    "using_fallback_profile": false,
+    "reason": "cooldown:21m",
+    "attempt_time": "2026-03-23T15:26:44.844602"
+  },
+  {
+    "timestamp": "2026-03-23T15:29:41.090476",
+    "account_uuid": "8d11dbfb-cdd8-4db7-9830-8ee115748e52",
+    "account_nickname": "EyeCatcher",
+    "action": "post_attempt",
+    "status": "skipped",
+    "using_fallback_profile": false,
+    "reason": "cooldown:18m",
+    "attempt_time": "2026-03-23T15:29:41.079823"
   }
 ]

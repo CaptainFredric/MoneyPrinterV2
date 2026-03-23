@@ -27,6 +27,9 @@
 #   phone_post.sh daemon       → old daemon health check (deprecated)
 #   phone_post.sh cleanup      → remove stale Firefox profile locks (safe, checks for active processes)
 #   phone_post.sh cleanup --dry-run → preview what would be cleaned
+#   phone_post.sh smart        → smart auto-rotate posting across accounts
+#   phone_post.sh smart-all    → smart mode but attempt all accounts
+#   phone_post.sh backfill <id>|all → backfill pending verification posts
 #   phone_post.sh check <id>   → inspect one twitter account
 #   phone_post.sh post <id>    → foreground post (waits until done)
 #   phone_post.sh detach <id>  → background post (safe to close Termius)
@@ -122,6 +125,15 @@ case "$MODE" in
         else
             "$VENV_PYTHON" scripts/cleanup_stale_locks.py
         fi
+        ;;
+    smart)
+        "$VENV_PYTHON" scripts/smart_post_twitter.py --headless
+        ;;
+    smart-all)
+        "$VENV_PYTHON" scripts/smart_post_twitter.py --headless --all-attempts
+        ;;
+    backfill)
+        "$VENV_PYTHON" scripts/backfill_pending_twitter.py "$TARGET" --headless
         ;;
     backup)
         "$VENV_PYTHON" scripts/report.py --backup
