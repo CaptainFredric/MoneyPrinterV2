@@ -260,12 +260,14 @@ def build_report() -> dict:
         last_content = ""
         last_category = ""
         last_tweet_url = ""
+        last_post_verified = False
         if posts:
             try:
                 last_dt = datetime.strptime(posts[-1]["date"], "%m/%d/%Y, %H:%M:%S")
                 last_content = posts[-1].get("content", "")[:80]
                 last_category = posts[-1].get("category", "")
                 last_tweet_url = posts[-1].get("tweet_url", "")
+                last_post_verified = bool(posts[-1].get("post_verified", False) or last_tweet_url)
             except (ValueError, KeyError):
                 pass
         report["twitter"].append({
@@ -278,6 +280,7 @@ def build_report() -> dict:
             "last_content_preview": last_content,
             "last_category": last_category,
             "last_tweet_url": last_tweet_url,
+            "last_post_verified": last_post_verified,
             "quality": _quality_snapshot(posts),
         })
 
@@ -319,6 +322,10 @@ def print_report(report: dict):
             print(f"  Preview  : \"{acc['last_content_preview']}...\"")
         if acc.get("last_tweet_url"):
             print(f"  URL      : {acc['last_tweet_url']}")
+        if acc.get("last_post_verified"):
+            print("  Verify   : live permalink verified")
+        elif acc.get("post_count", 0) > 0:
+            print("  Verify   : cache-only history (no permalink saved)")
         quality = acc.get("quality", {})
         if quality.get("sample_size", 0) > 0:
             print(

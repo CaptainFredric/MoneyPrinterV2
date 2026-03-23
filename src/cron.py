@@ -62,6 +62,9 @@ def main():
         try:
             post_status = twitter.post()
             print(f"MPV2_POST_STATUS:{post_status}")
+            if post_status.startswith("failed:"):
+                error(f"Twitter post verification failed: {post_status}")
+                sys.exit(1)
         except Exception as exc:
             error(f"Twitter post failed: {exc}")
             sys.exit(1)
