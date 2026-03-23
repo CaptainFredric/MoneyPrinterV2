@@ -60,6 +60,14 @@ def _find_firefox_binary() -> str:
     return ""
 
 
+def _is_profile_already_open(profile_path: str) -> bool:
+    lock_files = [".parentlock", "parent.lock", "lock"]
+    for lock_name in lock_files:
+        if os.path.exists(os.path.join(profile_path, lock_name)):
+            return True
+    return False
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Open an account Firefox profile for native X login repair")
     parser.add_argument("identifier", help="nickname or uuid")
@@ -84,6 +92,18 @@ def main() -> None:
     if not firefox_binary:
         print("Could not find Firefox binary on this machine.", file=sys.stderr)
         sys.exit(1)
+
+    if _is_profile_already_open(profile_path):
+        print("=" * 72)
+        print(f"Account : {account.get('nickname', '?')}")
+        if account.get("x_username"):
+            print(f"Handle  : {account['x_username']}")
+        print(f"Profile : {profile_path}")
+        print("Opened  : already running")
+        print("")
+        print("This profile already has an open Firefox window.")
+        print("Reusing existing window to avoid duplicate profile instances.")
+        return
 
     command = [
         firefox_binary,

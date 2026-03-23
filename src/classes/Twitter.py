@@ -53,6 +53,8 @@ class Twitter:
         self.account_nickname: str = account_nickname
         self.fp_profile_path: str = fp_profile_path
         self.topic: str = topic
+        self.using_fallback_profile: bool = False
+        self.fallback_profile_path: str = ""
 
         # Initialize the Firefox profile
         self.options: Options = Options()
@@ -70,14 +72,6 @@ class Twitter:
                 f"Firefox profile path does not exist or is not a directory: {fp_profile_path}"
             )
 
-        for lock_file_name in [".parentlock", "parent.lock", "lock"]:
-            lock_file_path = os.path.join(fp_profile_path, lock_file_name)
-            if os.path.exists(lock_file_path):
-                try:
-                    os.remove(lock_file_path)
-                except OSError:
-                    pass
-
         # Set the profile path
         self.options.add_argument("-profile")
         self.options.add_argument(fp_profile_path)
@@ -91,8 +85,10 @@ class Twitter:
                 service=self.service, options=self.options
             )
         except WebDriverException:
+            self.using_fallback_profile = True
             fallback_profile_path = tempfile.mkdtemp(prefix="mpv2_ff_profile_")
             shutil.copytree(fp_profile_path, fallback_profile_path, dirs_exist_ok=True)
+            self.fallback_profile_path = fallback_profile_path
 
             for lock_file_name in [".parentlock", "parent.lock", "lock"]:
                 lock_file_path = os.path.join(fallback_profile_path, lock_file_name)
@@ -504,6 +500,15 @@ class Twitter:
         Returns:
             status (dict): Readiness details
         """
+        if self.using_fallback_profile:
+            return {
+                "ready": False,
+                "reason": "profile-in-use",
+                "current_url": "",
+                "handle": "",
+                "configured_handle": (self._configured_account_handle() or "").strip().lstrip("@"),
+            }
+
         compose_url = "https://x.com/compose/post"
         text_box_selectors = [
             (By.CSS_SELECTOR, "div[data-testid='tweetTextarea_0'][role='textbox']"),
@@ -518,11 +523,24 @@ class Twitter:
         for selector in text_box_selectors:
             try:
                 self.browser.find_element(*selector)
+                live_handle = (self.get_live_account_handle() or "").strip().lstrip("@")
+                configured_handle = (self._configured_account_handle() or "").strip().lstrip("@")
+
+                if configured_handle and live_handle and live_handle.lower() != configured_handle.lower():
+                    return {
+                        "ready": False,
+                        "reason": "handle-mismatch",
+                        "current_url": current_url,
+                        "handle": live_handle,
+                        "configured_handle": configured_handle,
+                    }
+
                 return {
                     "ready": True,
                     "reason": "ready",
                     "current_url": current_url,
-                    "handle": self.get_live_account_handle(),
+                    "handle": live_handle,
+                    "configured_handle": configured_handle,
                 }
             except Exception:
                 continue
