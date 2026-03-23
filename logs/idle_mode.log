@@ -42,3 +42,4 @@ MPV2_POST_STATUS:failed:profile-in-use
 ❌ Twitter post verification failed: failed:profile-in-use
 MPV2_SMART_STATUS:niche_launch_1:skipped
 Smart attempts: 1 | posted: 0
+[idle] Received signal 15; shutting down cleanly.
