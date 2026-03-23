@@ -70,6 +70,7 @@ user_pref("browser.safebrowsing.provider.mozilla.lastupdatetime", "1774213238814
 user_pref("browser.safebrowsing.provider.mozilla.nextupdatetime", "1774234838814");
 user_pref("browser.search.region", "US");
 user_pref("browser.search.serpEventTelemetryCategorization.regionEnabled", true);
+user_pref("browser.search.serpMetricsRecordedCounter", 1);
 user_pref("browser.search.totalSearches", 7);
 user_pref("browser.sessionstore.resume_from_crash", false);
 user_pref("browser.sessionstore.upgradeBackup.latestBuildID", "20260309125808");
@@ -165,7 +166,7 @@ user_pref("pdfjs.migrationVersion", 2);
 user_pref("privacy.bounceTrackingProtection.hasMigratedUserActivationData", true);
 user_pref("privacy.clearOnShutdown_v2.formdata", true);
 user_pref("privacy.sanitize.clearOnShutdown.hasMigratedToNewPrefs3", true);
-user_pref("privacy.sanitize.pending", "[{\"id\":\"newtab-container\",\"itemsToClear\":[],\"options\":{}}]");
+user_pref("privacy.sanitize.pending", "[]");
 user_pref("privacy.trackingprotection.allow_list.hasMigratedCategoryPrefs", true);
 user_pref("privacy.trackingprotection.allow_list.hasUserInteractedWithETPSettings", true);
 user_pref("remote.active-protocols", 1);
