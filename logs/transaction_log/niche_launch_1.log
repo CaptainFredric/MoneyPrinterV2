@@ -227,5 +227,102 @@
     "using_fallback_profile": false,
     "reason": "cooldown:5m",
     "attempt_time": "2026-03-23T17:21:27.369798"
+  },
+  {
+    "timestamp": "2026-03-23T18:15:06.939633",
+    "account_uuid": "6f4f6c1a-2b4d-4dc9-9e8e-7d0e4f5c1a21",
+    "account_nickname": "niche_launch_1",
+    "action": "post_attempt",
+    "status": "pending",
+    "using_fallback_profile": true,
+    "reason": "unverified",
+    "text_snippet": "Why are you still checking email every hour? Implement the '2-hour rule' and ded",
+    "permalink_debug": {
+      "expected_handle": "nichenewton",
+      "compose_candidates": 4,
+      "compose_matching_candidates": 0,
+      "compose_samples": [
+        "https://x.com/annhybri/status/2036193838658629968",
+        "https://x.com/messedupfoods/status/2035965013161103586",
+        "https://x.com/lowcortisol/status/2036178880210391392",
+        "https://x.com/abbycartridges_/status/2036140473169948895"
+      ],
+      "profile_candidates": 4,
+      "timeline_items": 4,
+      "search_queries_tried": [
+        "https://x.com/search?q=from%3ANicheNewton+%22Why+are+you+still+checking+email+every+hour%3F+Implement+the%22&src=typed_query&f=live",
+        "https://x.com/search?q=from%3ANicheNewton+%22Why+are+you+still+checking+email+every+hour%3F+Implement+the+%272-hour+rule%27+and%22&src=typed_query&f=live"
+      ],
+      "match_method": "",
+      "pages_tried": [
+        "https://x.com/NicheNewton",
+        "https://x.com/NicheNewton/with_replies",
+        "https://x.com/search?q=from%3ANicheNewton&src=typed_query&f=live",
+        "https://x.com/NicheNewton",
+        "https://x.com/NicheNewton/with_replies",
+        "https://x.com/search?q=from%3ANicheNewton&src=typed_query&f=live",
+        "https://x.com/NicheNewton",
+        "https://x.com/NicheNewton/with_replies",
+        "https://x.com/search?q=from%3ANicheNewton&src=typed_query&f=live",
+        "https://x.com/NicheNewton",
+        "https://x.com/NicheNewton/with_replies",
+        "https://x.com/search?q=from%3ANicheNewton&src=typed_query&f=live",
+        "https://x.com/NicheNewton",
+        "https://x.com/NicheNewton/with_replies",
+        "https://x.com/search?q=from%3ANicheNewton&src=typed_query&f=live"
+      ]
+    },
+    "confidence_score": 39,
+    "confidence_level": "low",
+    "attempt_time": "2026-03-23T18:11:07.725428"
+  },
+  {
+    "timestamp": "2026-03-23T18:19:14.356878",
+    "account_uuid": "6f4f6c1a-2b4d-4dc9-9e8e-7d0e4f5c1a21",
+    "account_nickname": "niche_launch_1",
+    "action": "post_attempt",
+    "status": "pending",
+    "using_fallback_profile": true,
+    "reason": "unverified",
+    "text_snippet": "Did you know your most productive work hours are often just an hour away from yo",
+    "permalink_debug": {
+      "expected_handle": "nichenewton",
+      "compose_candidates": 5,
+      "compose_matching_candidates": 0,
+      "compose_samples": [
+        "https://x.com/pixelprayer/status/2036150465382195218",
+        "https://x.com/F0ODHub/status/2036126341993517321",
+        "https://x.com/cutecorestar/status/2036111554098196567",
+        "https://x.com/elonmusk/status/2035822362999058474",
+        "https://x.com/ArthurMacwaters/status/2035821264930254995"
+      ],
+      "profile_candidates": 4,
+      "timeline_items": 4,
+      "search_queries_tried": [
+        "https://x.com/search?q=from%3ANicheNewton+%22Did+you+know+your+most+productive+work+hours+are+often%22&src=typed_query&f=live",
+        "https://x.com/search?q=from%3ANicheNewton+%22Did+you+know+your+most+productive+work+hours+are+often+just+an+hour+away+from%22&src=typed_query&f=live"
+      ],
+      "match_method": "",
+      "pages_tried": [
+        "https://x.com/NicheNewton",
+        "https://x.com/NicheNewton/with_replies",
+        "https://x.com/search?q=from%3ANicheNewton&src=typed_query&f=live",
+        "https://x.com/NicheNewton",
+        "https://x.com/NicheNewton/with_replies",
+        "https://x.com/search?q=from%3ANicheNewton&src=typed_query&f=live",
+        "https://x.com/NicheNewton",
+        "https://x.com/NicheNewton/with_replies",
+        "https://x.com/search?q=from%3ANicheNewton&src=typed_query&f=live",
+        "https://x.com/NicheNewton",
+        "https://x.com/NicheNewton/with_replies",
+        "https://x.com/search?q=from%3ANicheNewton&src=typed_query&f=live",
+        "https://x.com/NicheNewton",
+        "https://x.com/NicheNewton/with_replies",
+        "https://x.com/search?q=from%3ANicheNewton&src=typed_query&f=live"
+      ]
+    },
+    "confidence_score": 39,
+    "confidence_level": "low",
+    "attempt_time": "2026-03-23T18:15:39.330982"
   }
 ]

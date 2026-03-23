@@ -290,7 +290,17 @@ def main() -> None:
                 time.sleep(1)
 
     finally:
+        last_state = {}
+        try:
+            if STATE_FILE.exists():
+                last_state = json.loads(STATE_FILE.read_text(encoding="utf-8"))
+                if not isinstance(last_state, dict):
+                    last_state = {}
+        except Exception:
+            last_state = {}
+
         final_state = {
+            **last_state,
             "cycle": cycle_index,
             "primary_account": args.primary_account,
             "stopped_at": datetime.now().isoformat(timespec="seconds"),
