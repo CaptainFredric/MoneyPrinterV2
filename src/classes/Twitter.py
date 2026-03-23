@@ -195,7 +195,23 @@ class Twitter:
             self._log_transaction('post_attempt', 'skipped', {'reason': cooldown_reason, 'attempt_time': now.isoformat()})
             return f"skipped:{cooldown_reason}"
 
-        bot.get("https://x.com/compose/post")
+        bot.get(self._home_url())
+        time.sleep(2)
+        if self._is_x_error_page():
+            raise RuntimeError("X home timeline is returning an error page in Firefox.")
+
+        composer_launch_selectors = [
+            (By.CSS_SELECTOR, "a[data-testid='SideNav_NewTweet_Button']"),
+            (By.CSS_SELECTOR, "button[data-testid='SideNav_NewTweet_Button']"),
+        ]
+        for selector in composer_launch_selectors:
+            try:
+                launch_button = self.wait.until(EC.element_to_be_clickable(selector))
+                launch_button.click()
+                time.sleep(2)
+                break
+            except Exception:
+                continue
 
         print(colored(" => Posting to Twitter:", "blue"), post_content[:50] + "...")
         body = post_content
@@ -244,8 +260,8 @@ class Twitter:
 
         post_button = None
         post_button_selectors = [
-            (By.XPATH, "//button[@data-testid='tweetButtonInline']"),
             (By.XPATH, "//button[@data-testid='tweetButton']"),
+            (By.XPATH, "//button[@data-testid='tweetButtonInline']"),
             (By.XPATH, "//span[text()='Post']/ancestor::button"),
         ]
 
@@ -493,6 +509,69 @@ class Twitter:
         """
         return f"https://x.com/{handle}"
 
+    def _home_url(self) -> str:
+        """
+        Returns the logged-in home timeline URL.
+
+        Returns:
+            url (str): Home URL
+        """
+        return "https://x.com/home"
+
+    def _is_x_error_page(self) -> bool:
+        """
+        Detects the X fullscreen error page.
+
+        Returns:
+            is_error (bool): Whether current page is the X error shell
+        """
+        try:
+            title = (self.browser.title or "").strip().lower()
+            if title == "x / error":
+                return True
+
+            page_source = self.browser.page_source or ""
+            return 'class="icecream"' in page_source or "This page is down" in page_source
+        except Exception:
+            return False
+
+    def _profile_visibility_issue(self, handle: str) -> bool:
+        """
+        Detects accounts whose live profile shows no authored posts despite cached history.
+
+        Args:
+            handle (str): Username without @
+
+        Returns:
+            has_issue (bool): Whether authored posts are unavailable live
+        """
+        cached_posts = self.get_posts()
+        if not handle or not cached_posts:
+            return False
+
+        try:
+            self.browser.get(self._timeline_url_for_handle(handle))
+            time.sleep(3)
+            if self._is_x_error_page():
+                return False
+
+            live_posts = self._collect_timeline_posts_from_current_page(limit=5)
+            if live_posts:
+                return False
+
+            body_text = ""
+            try:
+                body_text = self.browser.find_element(By.TAG_NAME, "body").text or ""
+            except Exception:
+                body_text = ""
+
+            if re.search(r"\b0\s+posts\b", body_text.lower()):
+                return True
+        except Exception:
+            return False
+
+        return False
+
     def _resolve_account_handle(self) -> str:
         """
         Resolves currently logged-in account handle from profile nav links.
@@ -516,9 +595,9 @@ class Twitter:
             except Exception:
                 continue
 
-        # Fallback probe: load compose page and retry selectors once.
+        # Fallback probe: load home page and retry selectors once.
         try:
-            self.browser.get("https://x.com/compose/post")
+            self.browser.get(self._home_url())
             time.sleep(2)
             for selector in selectors:
                 try:
@@ -559,7 +638,7 @@ class Twitter:
                 "configured_handle": (self._configured_account_handle() or "").strip().lstrip("@"),
             }
 
-        compose_url = "https://x.com/compose/post"
+        compose_url = self._home_url()
         text_box_selectors = [
             (By.CSS_SELECTOR, "div[data-testid='tweetTextarea_0'][role='textbox']"),
             (By.XPATH, "//div[@data-testid='tweetTextarea_0']//div[@role='textbox']"),
@@ -569,6 +648,15 @@ class Twitter:
         self.browser.get(compose_url)
         time.sleep(2)
         current_url = self.browser.current_url
+
+        if self._is_x_error_page():
+            return {
+                "ready": False,
+                "reason": "x-error-page",
+                "current_url": current_url,
+                "handle": "",
+                "configured_handle": (self._configured_account_handle() or "").strip().lstrip("@"),
+            }
 
         for selector in text_box_selectors:
             try:
@@ -590,6 +678,15 @@ class Twitter:
                         "ready": False,
                         "reason": "handle-mismatch",
                         "current_url": current_url,
+                        "handle": live_handle,
+                        "configured_handle": configured_handle,
+                    }
+
+                if live_handle and self._profile_visibility_issue(live_handle):
+                    return {
+                        "ready": False,
+                        "reason": "profile-posts-unavailable",
+                        "current_url": self.browser.current_url,
                         "handle": live_handle,
                         "configured_handle": configured_handle,
                     }
