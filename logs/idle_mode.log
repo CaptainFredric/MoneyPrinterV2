@@ -1,0 +1,36 @@
+[idle] Cycle 1 started at 2026-03-23T17:21:12
+▶ Smart attempt: niche_launch_1
+ℹ️ Initializing Twitter...
+ℹ️ Selected post mode: text
+ℹ️ Generating a post...
+ℹ️ Tweet length: 171 chars
+⚠️ Cooldown active: cooldown:5m
+MPV2_POST_STATUS:skipped:cooldown:5m
+✅ Done posting.
+MPV2_SMART_STATUS:niche_launch_1:skipped
+Smart attempts: 1 | posted: 0
+========================================================================
+Account : niche_launch_1
+Handle  : @NicheNewton
+Checked : 3
+Verified: 0
+- MISS 03/23/2026, 16:57:27 | Did you know that a 'Stop Doing' list can be just as powerful as a to-
+- MISS 03/23/2026, 16:23:39 | Want to reduce meetings by 50%? Try the '2-minute rule': if a meeting 
+- MISS 03/23/2026, 15:24:58 | What's holding you back from automating repetitive tasks? Explore Zapi
+========================================================================
+Accounts checked : 1
+Verified posts   : 0
+========================================================================
+Account : niche_launch_1
+Handle  : @NicheNewton
+Pending Checked : 4
+Backfilled OK   : 0
+- MISS 03/23/2026, 16:57:27 | Did you know that a 'Stop Doing' list can be just as powerful as a to-
+- MISS 03/23/2026, 16:23:39 | Want to reduce meetings by 50%? Try the '2-minute rule': if a meeting 
+- MISS 03/23/2026, 15:24:58 | What's holding you back from automating repetitive tasks? Explore Zapi
+- MISS 03/22/2026, 13:01:48 | Boost your focus with the Pomodoro Technique! Work...
+========================================================================
+Accounts checked : 1
+Pending checked  : 4
+Backfilled total : 0
+[idle] Sleeping 18 minute(s) before next cycle.

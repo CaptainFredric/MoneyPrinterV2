@@ -30,6 +30,11 @@
 #   phone_post.sh smart        → smart auto-rotate posting across accounts
 #   phone_post.sh smart-all    → smart mode but attempt all accounts
 #   phone_post.sh backfill <id>|all → backfill pending verification posts
+#   phone_post.sh money        → productive cycle: smart post + verify + backfill on primary account
+#   phone_post.sh idle-start   → start autonomous idle mode in background
+#   phone_post.sh idle-stop    → stop autonomous idle mode
+#   phone_post.sh idle-status  → show autonomous idle mode status
+#   phone_post.sh stats        → show posting/idle/account health stats
 #   phone_post.sh check <id>   → inspect one twitter account
 #   phone_post.sh post <id>    → foreground post (waits until done)
 #   phone_post.sh detach <id>  → background post (safe to close Termius)
@@ -52,6 +57,31 @@ cd "$ROOT_DIR"
 
 MODE="${1:-all}"
 TARGET="${2:-all}"
+PRIMARY_ACCOUNT="${MPV2_PRIMARY_ACCOUNT:-niche_launch_1}"
+RUNTIME_DIR="$ROOT_DIR/.mp/runtime"
+IDLE_PID_FILE="$RUNTIME_DIR/money_idle.pid"
+IDLE_STATE_FILE="$RUNTIME_DIR/money_idle_state.json"
+IDLE_STOP_FILE="$RUNTIME_DIR/money_idle.stop"
+IDLE_LOG_FILE="$ROOT_DIR/logs/idle_mode.log"
+
+idle_is_running() {
+    if [[ ! -f "$IDLE_PID_FILE" ]]; then
+        return 1
+    fi
+    local pid
+    pid="$(cat "$IDLE_PID_FILE" 2>/dev/null || true)"
+    [[ -n "$pid" ]] || return 1
+    kill -0 "$pid" >/dev/null 2>&1
+}
+
+idle_cleanup_stale_pid() {
+    if [[ ! -f "$IDLE_PID_FILE" ]]; then
+        return
+    fi
+    if ! idle_is_running; then
+        rm -f "$IDLE_PID_FILE"
+    fi
+}
 
 run_post_foreground() {
     local target="$1"
@@ -131,6 +161,86 @@ case "$MODE" in
         ;;
     smart-all)
         "$VENV_PYTHON" scripts/smart_post_twitter.py --headless --all-attempts
+        ;;
+    money)
+        "$VENV_PYTHON" scripts/smart_post_twitter.py --headless --allow-no-post --only-account "$PRIMARY_ACCOUNT"
+        echo ""
+        "$VENV_PYTHON" scripts/verify_twitter_posts.py "$PRIMARY_ACCOUNT" || true
+        echo ""
+        "$VENV_PYTHON" scripts/backfill_pending_twitter.py "$PRIMARY_ACCOUNT" --headless || true
+        ;;
+    idle-start)
+        mkdir -p "$RUNTIME_DIR" "$ROOT_DIR/logs"
+        idle_cleanup_stale_pid
+        if idle_is_running; then
+            echo "✅ Idle mode already running (PID: $(cat "$IDLE_PID_FILE"))."
+            echo "   Log: $IDLE_LOG_FILE"
+            exit 0
+        fi
+
+        rm -f "$IDLE_STOP_FILE"
+        nohup "$VENV_PYTHON" -u scripts/money_idle_mode.py \
+            --headless \
+            --primary-account "$PRIMARY_ACCOUNT" \
+            --min-minutes "${MPV2_IDLE_MIN_MINUTES:-8}" \
+            --max-minutes "${MPV2_IDLE_MAX_MINUTES:-22}" \
+            >"$IDLE_LOG_FILE" 2>&1 < /dev/null &
+        idle_pid=$!
+        disown "$idle_pid" 2>/dev/null || true
+
+        echo "✅ Idle mode started."
+        echo "   PID: $idle_pid"
+        echo "   Primary account: $PRIMARY_ACCOUNT"
+        echo "   Log: $IDLE_LOG_FILE"
+        ;;
+    idle-stop)
+        mkdir -p "$RUNTIME_DIR"
+        touch "$IDLE_STOP_FILE"
+        idle_cleanup_stale_pid
+
+        if idle_is_running; then
+            pid="$(cat "$IDLE_PID_FILE")"
+            kill "$pid" >/dev/null 2>&1 || true
+            for _ in {1..10}; do
+                if ! kill -0 "$pid" >/dev/null 2>&1; then
+                    break
+                fi
+                sleep 1
+            done
+
+            if kill -0 "$pid" >/dev/null 2>&1; then
+                kill -9 "$pid" >/dev/null 2>&1 || true
+                echo "🛑 Idle mode force-stopped (PID: $pid)."
+            else
+                echo "🛑 Idle mode stopped (PID: $pid)."
+            fi
+            rm -f "$IDLE_PID_FILE"
+        else
+            echo "ℹ️ Idle mode is not currently running."
+        fi
+        ;;
+    idle-status)
+        idle_cleanup_stale_pid
+        if idle_is_running; then
+            echo "✅ Idle mode running (PID: $(cat "$IDLE_PID_FILE"))."
+        else
+            echo "ℹ️ Idle mode not running."
+        fi
+
+        if [[ -f "$IDLE_STATE_FILE" ]]; then
+            echo ""
+            echo "Last state:"
+            cat "$IDLE_STATE_FILE"
+        fi
+
+        if [[ -f "$IDLE_LOG_FILE" ]]; then
+            echo ""
+            echo "Recent idle log:"
+            tail -n 20 "$IDLE_LOG_FILE"
+        fi
+        ;;
+    stats)
+        "$VENV_PYTHON" scripts/stats_report.py
         ;;
     backfill)
         "$VENV_PYTHON" scripts/backfill_pending_twitter.py "$TARGET" --headless

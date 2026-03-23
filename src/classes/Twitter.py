@@ -60,6 +60,7 @@ class Twitter:
         self.last_cooldown_warning_time: Optional[datetime] = None
         self.last_permalink_debug: dict = {}
 
+
         # Initialize the Firefox profile
         self.options: Options = Options()
 
@@ -295,6 +296,7 @@ class Twitter:
         angle_signature = self._extract_angle_signature(body, post_category)
         tweet_url = self._resolve_post_permalink(body)
         resolved_format = "media" if media_path and post_mode == "media" else ("link" if post_urls else "text")
+        confidence_payload = self._compute_post_confidence(tweet_url=tweet_url)
 
         if not tweet_url:
             warning(
@@ -312,6 +314,9 @@ class Twitter:
                     "tweet_url": "",
                     "post_verified": False,
                     "verification_state": "pending",
+                    "confidence_score": confidence_payload["score"],
+                    "confidence_level": confidence_payload["level"],
+                    "confidence_signals": confidence_payload["signals"],
                 }
             )
             self._record_angle_signature(angle_signature, post_category)
@@ -319,6 +324,8 @@ class Twitter:
                 'reason': 'unverified',
                 'text_snippet': body[:80],
                 'permalink_debug': self.last_permalink_debug,
+                'confidence_score': confidence_payload["score"],
+                'confidence_level': confidence_payload["level"],
                 'attempt_time': now.isoformat()
             })
             return "posted:pending-verification"
@@ -333,6 +340,10 @@ class Twitter:
                 "angle_signature": angle_signature,
                 "tweet_url": tweet_url,
                 "post_verified": True,
+                "verification_state": "verified",
+                "confidence_score": confidence_payload["score"],
+                "confidence_level": confidence_payload["level"],
+                "confidence_signals": confidence_payload["signals"],
             }
         )
 
@@ -342,6 +353,8 @@ class Twitter:
             'text_snippet': body[:80],
             'tweet_url': tweet_url,
             'category': post_category,
+            'confidence_score': confidence_payload["score"],
+            'confidence_level': confidence_payload["level"],
             'attempt_time': now.isoformat()
         })
 
@@ -1089,6 +1102,18 @@ class Twitter:
                 ):
                     cached_post["post_verified"] = verified
                     cached_post["verification_state"] = "verified" if verified else "pending"
+                    if verified:
+                        cached_post["confidence_score"] = 100
+                        cached_post["confidence_level"] = "verified"
+                    else:
+                        existing_score_raw = cached_post.get("confidence_score", 35)
+                        try:
+                            existing_score = int(existing_score_raw)
+                        except Exception:
+                            existing_score = 35
+                        normalized_score = max(20, min(existing_score, 60))
+                        cached_post["confidence_score"] = normalized_score
+                        cached_post["confidence_level"] = self._confidence_level(normalized_score)
                     if tweet_url is not None:
                         cached_post["tweet_url"] = tweet_url
                     updated = True
@@ -1654,6 +1679,77 @@ class Twitter:
         text = re.sub(r"[^a-z0-9\s]", " ", text)
         text = re.sub(r"\s+", " ", text).strip()
         return text
+
+    def _confidence_level(self, score: int) -> str:
+        """
+        Maps confidence score into a level label.
+
+        Args:
+            score (int): 0..100 score
+
+        Returns:
+            level (str): low|medium|high|verified
+        """
+        if score >= 100:
+            return "verified"
+        if score >= 80:
+            return "high"
+        if score >= 50:
+            return "medium"
+        return "low"
+
+    def _compute_post_confidence(self, tweet_url: str) -> dict:
+        """
+        Computes a Phase 1 publish-confidence score for a just-posted tweet.
+
+        Signals considered:
+        - Compose accepted by X UI
+        - Canonical permalink found
+        - Match method quality
+        - Handle-consistent candidate evidence
+
+        Args:
+            tweet_url (str): Resolved permalink (or empty)
+
+        Returns:
+            payload (dict): score, level, and signal details
+        """
+        debug = self.last_permalink_debug if isinstance(self.last_permalink_debug, dict) else {}
+        match_method = str(debug.get("match_method", "")).strip().lower()
+        compose_candidates = int(debug.get("compose_candidates", 0) or 0)
+        compose_matching_candidates = int(debug.get("compose_matching_candidates", 0) or 0)
+        timeline_items = int(debug.get("timeline_items", 0) or 0)
+
+        score = 35
+        if tweet_url:
+            score += 40
+
+        if match_method in {"timeline-text", "search-text"}:
+            score += 20
+        elif match_method in {"compose-candidates", "page-weak", "compose-first"}:
+            score += 10
+
+        if compose_matching_candidates > 0:
+            score += 8
+
+        if compose_candidates > 0 and timeline_items > 0:
+            score += 4
+
+        score = max(0, min(score, 95))
+        level = self._confidence_level(score)
+
+        return {
+            "score": score,
+            "level": level,
+            "signals": {
+                "compose_accepted": True,
+                "tweet_url_found": bool(tweet_url),
+                "match_method": match_method,
+                "compose_candidates": compose_candidates,
+                "compose_matching_candidates": compose_matching_candidates,
+                "timeline_items": timeline_items,
+            },
+        }
 
     def _extract_urls(self, text: str) -> list[str]:
         """
