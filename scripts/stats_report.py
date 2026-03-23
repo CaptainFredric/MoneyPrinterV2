@@ -162,12 +162,19 @@ def main() -> None:
         confidence_scores: list[int] = []
         for item in posts:
             raw = item.get("confidence_score", None)
-            if raw is None:
-                continue
-            try:
-                confidence_scores.append(int(raw))
-            except Exception:
-                continue
+            if raw is not None:
+                try:
+                    confidence_scores.append(int(raw))
+                    continue
+                except Exception:
+                    pass
+
+            if item.get("post_verified") is True:
+                confidence_scores.append(100)
+            elif str(item.get("tweet_url", "")).strip():
+                confidence_scores.append(85)
+            elif str(item.get("verification_state", "")).strip().lower() == "pending":
+                confidence_scores.append(35)
 
         avg_conf = round(sum(confidence_scores) / len(confidence_scores), 1) if confidence_scores else "-"
         high_conf = sum(1 for score in confidence_scores if score >= 80)

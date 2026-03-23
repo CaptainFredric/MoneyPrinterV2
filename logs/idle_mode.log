@@ -34,3 +34,11 @@ Accounts checked : 1
 Pending checked  : 4
 Backfilled total : 0
 [idle] Sleeping 18 minute(s) before next cycle.
+[idle] Cycle 2 started at 2026-03-23T17:40:50
+▶ Smart attempt: niche_launch_1
+ℹ️ Initializing Twitter...
+⚠️ X session not ready for posting: profile-in-use
+MPV2_POST_STATUS:failed:profile-in-use
+❌ Twitter post verification failed: failed:profile-in-use
+MPV2_SMART_STATUS:niche_launch_1:skipped
+Smart attempts: 1 | posted: 0
