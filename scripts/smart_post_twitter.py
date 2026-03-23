@@ -19,6 +19,7 @@ import os
 import subprocess
 import sys
 from datetime import datetime
+from datetime import timedelta
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -32,6 +33,7 @@ VENV_PYTHON = ROOT_DIR / "venv" / "bin" / "python"
 DOT_VENV_PYTHON = ROOT_DIR / ".venv" / "bin" / "python"
 CRON_SCRIPT = ROOT_DIR / "src" / "cron.py"
 CONFIG_PATH = ROOT_DIR / "config.json"
+TRANSACTION_LOG_DIR = ROOT_DIR / "logs" / "transaction_log"
 
 
 def _load_accounts() -> list[dict]:
@@ -97,13 +99,86 @@ def _sort_accounts_for_rotation(accounts: list[dict]) -> list[dict]:
     return sorted(accounts, key=_last_post_dt)
 
 
+def _filter_accounts(accounts: list[dict], identifier: str) -> list[dict]:
+    needle = (identifier or "").strip().lower()
+    if not needle:
+        return accounts
+
+    return [
+        account
+        for account in accounts
+        if account.get("nickname", "").lower() == needle
+        or account.get("id", "").lower() == needle
+    ]
+
+
 def _account_precheck(account: dict) -> tuple[bool, str]:
     profile = account.get("firefox_profile", "")
     if not profile:
         return False, "missing-firefox-profile"
     if not os.path.isdir(profile):
         return False, "firefox-profile-not-found"
+
+    nickname = account.get("nickname", account.get("id", "unknown")[:8])
+    quarantine_reason = _recent_quarantine_reason(nickname)
+    if quarantine_reason:
+        return False, quarantine_reason
+
     return True, "ok"
+
+
+def _recent_quarantine_reason(nickname: str) -> str:
+    """
+    Skips accounts that recently failed for structural session reasons.
+
+    Args:
+        nickname (str): Account nickname
+
+    Returns:
+        reason (str): Non-empty reason when account should be temporarily quarantined
+    """
+    log_path = TRANSACTION_LOG_DIR / f"{nickname}.log"
+    if not log_path.exists():
+        return ""
+
+    try:
+        logs = json.loads(log_path.read_text(encoding="utf-8"))
+    except Exception:
+        return ""
+
+    if not isinstance(logs, list) or not logs:
+        return ""
+
+    now = datetime.now()
+    quarantine_until = now - timedelta(hours=6)
+    quarantine_reasons = {
+        "profile-posts-unavailable",
+        "x-error-page",
+        "login-required",
+        "handle-mismatch",
+        "handle-unresolved",
+        "profile-in-use",
+    }
+
+    for entry in reversed(logs[-50:]):
+        if not isinstance(entry, dict):
+            continue
+        timestamp_raw = str(entry.get("timestamp", "")).strip()
+        if not timestamp_raw:
+            continue
+        try:
+            timestamp = datetime.fromisoformat(timestamp_raw)
+        except Exception:
+            continue
+        if timestamp < quarantine_until:
+            break
+
+        reason = str(entry.get("reason", "")).strip()
+        if reason in quarantine_reasons:
+            mins = int((now - timestamp).total_seconds() // 60)
+            return f"quarantine:{reason}:{mins}m"
+
+    return ""
 
 
 def _try_account(account: dict, headless: bool) -> tuple[str, str]:
@@ -180,12 +255,25 @@ def main() -> None:
         action="store_true",
         help="try all accounts even after first successful post",
     )
+    parser.add_argument(
+        "--allow-no-post",
+        action="store_true",
+        help="exit 0 when no post occurs (useful for cooldown/quarantine cycles)",
+    )
+    parser.add_argument(
+        "--only-account",
+        type=str,
+        default="",
+        help="limit attempts to one account nickname or uuid",
+    )
     args = parser.parse_args()
 
     if args.headless:
         os.environ["MPV2_HEADLESS"] = "1"
 
     accounts = _sort_accounts_for_rotation(_load_accounts())
+    if args.only_account:
+        accounts = _filter_accounts(accounts, args.only_account)
     if not accounts:
         print("No twitter accounts found in cache.", file=sys.stderr)
         sys.exit(1)
@@ -204,7 +292,11 @@ def main() -> None:
                 break
 
     print(f"Smart attempts: {attempted} | posted: {posted_count}")
-    sys.exit(0 if posted_count > 0 else 1)
+    if posted_count > 0:
+        sys.exit(0)
+    if args.allow_no_post:
+        sys.exit(0)
+    sys.exit(1)
 
 
 if __name__ == "__main__":
