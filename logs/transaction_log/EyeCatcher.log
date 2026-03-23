@@ -297,5 +297,50 @@
     "using_fallback_profile": false,
     "reason": "cooldown:18m",
     "attempt_time": "2026-03-23T15:29:41.079823"
+  },
+  {
+    "timestamp": "2026-03-23T16:16:37.520355",
+    "account_uuid": "8d11dbfb-cdd8-4db7-9830-8ee115748e52",
+    "account_nickname": "EyeCatcher",
+    "action": "post_attempt",
+    "status": "pending",
+    "using_fallback_profile": false,
+    "reason": "unverified",
+    "text_snippet": "Your brain's 'false memory' filter breaks down after age 40, leaving you vulnera",
+    "permalink_debug": {
+      "expected_handle": "eyecaughtthat2",
+      "compose_candidates": 3,
+      "compose_matching_candidates": 0,
+      "compose_samples": [
+        "https://x.com/shiri_shh/status/2035644582940348534",
+        "https://x.com/not_alive_irl/status/2035924083293004105",
+        "https://x.com/chesterzelaya/status/2035793246216229339"
+      ],
+      "profile_candidates": 0,
+      "timeline_items": 0,
+      "search_queries_tried": [
+        "https://x.com/search?q=from%3AEyeCaughtThat2+%22Your+brain%27s+%27false+memory%27+filter+breaks+down+after+age+40%2C%22&src=typed_query&f=live",
+        "https://x.com/search?q=from%3AEyeCaughtThat2+%22Your+brain%27s+%27false+memory%27+filter+breaks+down+after+age+40%2C+leaving+you%22&src=typed_query&f=live"
+      ],
+      "match_method": "",
+      "pages_tried": [
+        "https://x.com/EyeCaughtThat2",
+        "https://x.com/EyeCaughtThat2/with_replies",
+        "https://x.com/search?q=from%3AEyeCaughtThat2&src=typed_query&f=live",
+        "https://x.com/EyeCaughtThat2",
+        "https://x.com/EyeCaughtThat2/with_replies",
+        "https://x.com/search?q=from%3AEyeCaughtThat2&src=typed_query&f=live",
+        "https://x.com/EyeCaughtThat2",
+        "https://x.com/EyeCaughtThat2/with_replies",
+        "https://x.com/search?q=from%3AEyeCaughtThat2&src=typed_query&f=live",
+        "https://x.com/EyeCaughtThat2",
+        "https://x.com/EyeCaughtThat2/with_replies",
+        "https://x.com/search?q=from%3AEyeCaughtThat2&src=typed_query&f=live",
+        "https://x.com/EyeCaughtThat2",
+        "https://x.com/EyeCaughtThat2/with_replies",
+        "https://x.com/search?q=from%3AEyeCaughtThat2&src=typed_query&f=live"
+      ]
+    },
+    "attempt_time": "2026-03-23T16:13:38.308386"
   }
 ]

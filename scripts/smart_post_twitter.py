@@ -147,6 +147,18 @@ def _try_account(account: dict, headless: bool) -> tuple[str, str]:
             print(f"MPV2_SMART_STATUS:{nickname}:skipped")
             return "skipped", post_status
 
+        skippable_failures = {
+            "failed:profile-posts-unavailable",
+            "failed:profile-in-use",
+            "failed:handle-mismatch",
+            "failed:handle-unresolved",
+            "failed:login-required",
+            "failed:x-error-page",
+        }
+        if post_status in skippable_failures:
+            print(f"MPV2_SMART_STATUS:{nickname}:skipped")
+            return "skipped", post_status
+
         print(f"MPV2_SMART_STATUS:{nickname}:failed")
         if post_status:
             return "failed", post_status

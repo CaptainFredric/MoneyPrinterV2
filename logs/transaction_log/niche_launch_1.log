@@ -44,5 +44,71 @@
     "using_fallback_profile": false,
     "reason": "cooldown:24m",
     "attempt_time": "2026-03-23T15:30:06.036428"
+  },
+  {
+    "timestamp": "2026-03-23T16:26:45.949253",
+    "account_uuid": "6f4f6c1a-2b4d-4dc9-9e8e-7d0e4f5c1a21",
+    "account_nickname": "niche_launch_1",
+    "action": "post_attempt",
+    "status": "pending",
+    "using_fallback_profile": false,
+    "reason": "unverified",
+    "text_snippet": "Want to reduce meetings by 50%? Try the '2-minute rule': if a meeting can be dec",
+    "permalink_debug": {
+      "expected_handle": "nichenewton",
+      "compose_candidates": 4,
+      "compose_matching_candidates": 0,
+      "compose_samples": [
+        "https://x.com/ArcSamaa/status/2036141057596096830",
+        "https://x.com/BGatesIsaPyscho/status/2035986324788777243",
+        "https://x.com/cherry2doodles/status/2035878402628911210",
+        "https://x.com/Tekeee/status/2036095629458362745"
+      ],
+      "profile_candidates": 4,
+      "timeline_items": 4,
+      "search_queries_tried": [
+        "https://x.com/search?q=from%3ANicheNewton+%22Want+to+reduce+meetings+by+50%25%3F+Try+the+%272-minute+rule%27%3A%22&src=typed_query&f=live",
+        "https://x.com/search?q=from%3ANicheNewton+%22Want+to+reduce+meetings+by+50%25%3F+Try+the+%272-minute+rule%27%3A+if+a+meeting+can+be%22&src=typed_query&f=live"
+      ],
+      "match_method": "",
+      "pages_tried": [
+        "https://x.com/NicheNewton",
+        "https://x.com/NicheNewton/with_replies",
+        "https://x.com/search?q=from%3ANicheNewton&src=typed_query&f=live",
+        "https://x.com/NicheNewton",
+        "https://x.com/NicheNewton/with_replies",
+        "https://x.com/search?q=from%3ANicheNewton&src=typed_query&f=live",
+        "https://x.com/NicheNewton",
+        "https://x.com/NicheNewton/with_replies",
+        "https://x.com/search?q=from%3ANicheNewton&src=typed_query&f=live",
+        "https://x.com/NicheNewton",
+        "https://x.com/NicheNewton/with_replies",
+        "https://x.com/search?q=from%3ANicheNewton&src=typed_query&f=live",
+        "https://x.com/NicheNewton",
+        "https://x.com/NicheNewton/with_replies",
+        "https://x.com/search?q=from%3ANicheNewton&src=typed_query&f=live"
+      ]
+    },
+    "attempt_time": "2026-03-23T16:23:39.280769"
+  },
+  {
+    "timestamp": "2026-03-23T16:30:13.240207",
+    "account_uuid": "6f4f6c1a-2b4d-4dc9-9e8e-7d0e4f5c1a21",
+    "account_nickname": "niche_launch_1",
+    "action": "post_attempt",
+    "status": "skipped",
+    "using_fallback_profile": false,
+    "reason": "cooldown:23m",
+    "attempt_time": "2026-03-23T16:30:13.235769"
+  },
+  {
+    "timestamp": "2026-03-23T16:31:20.580645",
+    "account_uuid": "6f4f6c1a-2b4d-4dc9-9e8e-7d0e4f5c1a21",
+    "account_nickname": "niche_launch_1",
+    "action": "post_attempt",
+    "status": "skipped",
+    "using_fallback_profile": false,
+    "reason": "cooldown:22m",
+    "attempt_time": "2026-03-23T16:31:20.572089"
   }
 ]
