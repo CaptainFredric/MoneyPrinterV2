@@ -1,14 +1,48 @@
 [
-    {
-        "timestamp": "2026-03-23T10:18:26.785281",
-        "account_uuid": "6f4f6c1a-2b4d-4dc9-9e8e-7d0e4f5c1a21",
-        "account_nickname": "niche_launch_1",
-        "action": "post_attempt",
-        "status": "success",
-        "using_fallback_profile": false,
-        "text_snippet": "Did 80/20 principle hold true for your week? What's one non-negotiable task you'",
-        "tweet_url": "https://x.com/NicheNewton/status/2036100128998645869",
-        "category": "task-management",
-        "attempt_time": "2026-03-23T10:17:20.189541"
-    }
+  {
+    "timestamp": "2026-03-23T10:18:26.785281",
+    "account_uuid": "6f4f6c1a-2b4d-4dc9-9e8e-7d0e4f5c1a21",
+    "account_nickname": "niche_launch_1",
+    "action": "post_attempt",
+    "status": "success",
+    "using_fallback_profile": false,
+    "text_snippet": "Did 80/20 principle hold true for your week? What's one non-negotiable task you'",
+    "tweet_url": "https://x.com/NicheNewton/status/2036100128998645869",
+    "category": "task-management",
+    "attempt_time": "2026-03-23T10:17:20.189541"
+  },
+  {
+    "timestamp": "2026-03-23T12:06:50.116125",
+    "account_uuid": "6f4f6c1a-2b4d-4dc9-9e8e-7d0e4f5c1a21",
+    "account_nickname": "niche_launch_1",
+    "action": "post_attempt",
+    "status": "success",
+    "using_fallback_profile": false,
+    "text_snippet": "What's the #1 productivity killer for you? Identify your 'energy vampires' and e",
+    "tweet_url": "https://x.com/NicheNewton/status/2036127407271268734",
+    "category": "energy",
+    "attempt_time": "2026-03-23T12:05:45.303794"
+  },
+  {
+    "timestamp": "2026-03-23T15:26:18.676105",
+    "account_uuid": "6f4f6c1a-2b4d-4dc9-9e8e-7d0e4f5c1a21",
+    "account_nickname": "niche_launch_1",
+    "action": "post_attempt",
+    "status": "success",
+    "using_fallback_profile": false,
+    "text_snippet": "What's holding you back from automating repetitive tasks? Explore Zapier or IFTT",
+    "tweet_url": "https://x.com/NicheNewton/status/2036127407271268734",
+    "category": "general",
+    "attempt_time": "2026-03-23T15:24:58.483040"
+  },
+  {
+    "timestamp": "2026-03-23T15:30:06.043095",
+    "account_uuid": "6f4f6c1a-2b4d-4dc9-9e8e-7d0e4f5c1a21",
+    "account_nickname": "niche_launch_1",
+    "action": "post_attempt",
+    "status": "skipped",
+    "using_fallback_profile": false,
+    "reason": "cooldown:24m",
+    "attempt_time": "2026-03-23T15:30:06.036428"
+  }
 ]
