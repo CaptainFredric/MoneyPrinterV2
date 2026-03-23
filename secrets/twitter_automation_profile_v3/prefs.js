@@ -82,7 +82,7 @@ user_pref("browser.termsofuse.prefMigrationCheck", true);
 user_pref("browser.toolbarbuttons.introduced.sidebar-button", true);
 user_pref("browser.toolbars.bookmarks.visibility", "always");
 user_pref("browser.topsites.contile.cacheValidFor", 10800);
-user_pref("browser.topsites.contile.lastFetch", 1774268079);
+user_pref("browser.topsites.contile.lastFetch", 1774268986);
 user_pref("browser.uiCustomization.state", "{\"placements\":{\"widget-overflow-fixed-list\":[],\"unified-extensions-area\":[\"_531906d3-e22f-4a6c-a102-8057b88a1a63_-browser-action\",\"_aff8af88-06a9-4eee-b383-3af08c47b8c8_-browser-action\"],\"nav-bar\":[\"sidebar-button\",\"back-button\",\"forward-button\",\"stop-reload-button\",\"customizableui-special-spring1\",\"vertical-spacer\",\"urlbar-container\",\"customizableui-special-spring2\",\"downloads-button\",\"fxa-toolbar-menu-button\",\"unified-extensions-button\"],\"TabsToolbar\":[\"firefox-view-button\",\"tabbrowser-tabs\",\"new-tab-button\",\"alltabs-button\"],\"vertical-tabs\":[],\"PersonalToolbar\":[\"personal-bookmarks\"]},\"seen\":[\"developer-button\",\"screenshot-button\",\"_531906d3-e22f-4a6c-a102-8057b88a1a63_-browser-action\",\"_aff8af88-06a9-4eee-b383-3af08c47b8c8_-browser-action\"],\"dirtyAreaCache\":[\"nav-bar\",\"vertical-tabs\",\"TabsToolbar\",\"PersonalToolbar\",\"unified-extensions-area\"],\"currentVersion\":23,\"newElementCount\":2}");
 user_pref("browser.uitour.enabled", false);
 user_pref("browser.urlbar.lastUrlbarSearchSeconds", 1774221369);
