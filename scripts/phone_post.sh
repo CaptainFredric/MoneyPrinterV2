@@ -23,7 +23,10 @@
 #   phone_post.sh autotune-apply→ apply ratio tuning changes
 #   phone_post.sh autotune-unlocked-apply → apply tuning without phase lock (advanced)
 #   phone_post.sh backup       → manual cache backup
-#   phone_post.sh health       → daemon + report health check
+#   phone_post.sh health|diag|diagnostic → comprehensive system health diagnostic
+#   phone_post.sh daemon       → old daemon health check (deprecated)
+#   phone_post.sh cleanup      → remove stale Firefox profile locks (safe, checks for active processes)
+#   phone_post.sh cleanup --dry-run → preview what would be cleaned
 #   phone_post.sh check <id>   → inspect one twitter account
 #   phone_post.sh post <id>    → foreground post (waits until done)
 #   phone_post.sh detach <id>  → background post (safe to close Termius)
@@ -107,8 +110,18 @@ case "$MODE" in
     autotune-unlocked-apply)
         "$VENV_PYTHON" scripts/auto_tune_ratios.py --apply --no-phase-lock
         ;;
-    health)
+    health|diag|diagnostic)
+        "$VENV_PYTHON" scripts/health_diagnostic.py "$TARGET"
+        ;;
+    daemon)
         bash "$ROOT_DIR/scripts/health_check.sh"
+        ;;
+    cleanup)
+        if [[ "$TARGET" == "--dry-run" ]]; then
+            "$VENV_PYTHON" scripts/cleanup_stale_locks.py --dry-run
+        else
+            "$VENV_PYTHON" scripts/cleanup_stale_locks.py
+        fi
         ;;
     backup)
         "$VENV_PYTHON" scripts/report.py --backup
