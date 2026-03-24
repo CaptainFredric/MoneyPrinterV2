@@ -190,3 +190,31 @@ Error   : Could not resolve logged-in X handle from browser profile.
 ========================================================================
 Accounts checked : 1
 Verified posts   : 0
+========================================================================
+Account : niche_launch_1
+Pending Checked : 6
+Backfilled OK   : 0
+Error          : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Pending checked  : 6
+Backfilled total : 0
+
+============================================================
+Firefox Profile Lock Cleanup Utility
+============================================================
+
+
+📁 niche_launch_1
+   Profile: /Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/secrets/twitter_automation_profile_v3
+ℹ️  Skipped (active): .parentlock
+
+📁 EyeCatcher
+   Profile: /Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/secrets/twitter_automation_profile_v2
+⚠️  Profile directory not found
+
+============================================================
+Summary: Cleaned 0 | Skipped 2
+============================================================
+
+[idle] Sleeping 13 minute(s) before next cycle.
