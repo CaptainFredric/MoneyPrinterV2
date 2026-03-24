@@ -29,9 +29,11 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 from cache import get_twitter_cache_path  # noqa: E402
+from runtime_python import resolve_runtime_python  # noqa: E402
 
 VENV_PYTHON = ROOT_DIR / "venv" / "bin" / "python"
 DOT_VENV_PYTHON = ROOT_DIR / ".venv" / "bin" / "python"
+RUNTIME_VENV_PYTHON = ROOT_DIR / ".runtime-venv" / "bin" / "python"
 CRON_SCRIPT = ROOT_DIR / "src" / "cron.py"
 CONFIG_PATH = ROOT_DIR / "config.json"
 TRANSACTION_LOG_DIR = ROOT_DIR / "logs" / "transaction_log"
@@ -89,7 +91,11 @@ def _get_model() -> str:
 
 
 def _get_python_executable() -> str:
-    candidates = [VENV_PYTHON, DOT_VENV_PYTHON]
+    resolved = resolve_runtime_python()
+    if resolved:
+        return resolved
+
+    candidates = [RUNTIME_VENV_PYTHON, VENV_PYTHON, DOT_VENV_PYTHON]
     for candidate in candidates:
         if not candidate.exists():
             continue

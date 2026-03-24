@@ -88,3 +88,63 @@ Backfilled total : 0
 niche_launch_1       | ACTIVE     | health= 46 | last=
 EyeCatcher           | ACTIVE     | health= 46 | last=
 [idle-p2] Sleeping 21 minute(s) before next cycle.
+
+[idle-p2] ========== Cycle 4 started at 2026-03-24T17:38:40 ==========
+[idle-p2] Selected account: niche_launch_1 (active:health=46)
+Fatal Python error: init_import_site: Failed to import the site module
+Python runtime state: initialized
+Traceback (most recent call last):
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap>", line 1176, in exec_module
+  File "<frozen site>", line 636, in <module>
+  File "<frozen site>", line 619, in main
+  File "<frozen site>", line 538, in venv
+TimeoutError: [Errno 60] Operation timed out
+[idle-p2] Account niche_launch_1 transitioned to: active
+[idle-p2] Account health score: 46
+[idle-p2] Skipping verify/backfill this cycle (no qualified post, non-maintenance cycle).
+Fatal Python error: init_import_site: Failed to import the site module
+Python runtime state: initialized
+Traceback (most recent call last):
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap>", line 1176, in exec_module
+  File "<frozen site>", line 636, in <module>
+  File "<frozen site>", line 619, in main
+  File "<frozen site>", line 538, in venv
+TimeoutError: [Errno 60] Operation timed out
+[idle-p2] Account states summary:
+niche_launch_1       | ACTIVE     | health= 46 | last=
+EyeCatcher           | ACTIVE     | health= 46 | last=
+[idle-p2] Sleeping 16 minute(s) before next cycle.
+
+[idle-p2] ========== Cycle 5 started at 2026-03-24T17:54:46 ==========
+[idle-p2] Selected account: niche_launch_1 (active:health=46)
+Traceback (most recent call last):
+  File "/Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/scripts/money_idle_phase2.py", line 242, in main
+    
+    
+  File "/Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/scripts/money_idle_phase2.py", line 149, in _save_state
+    temp_path = STATE_FILE.with_suffix(".tmp")
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.12/3.12.13/Frameworks/Python.framework/Versions/3.12/lib/python3.12/pathlib.py", line 1047, in write_text
+    with self.open(mode='w', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/homebrew/Cellar/python@3.12/3.12.13/Frameworks/Python.framework/Versions/3.12/lib/python3.12/pathlib.py", line 1013, in open
+    return io.open(self, mode, buffering, encoding, errors, newline)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+OSError: [Errno 28] No space left on device: '/Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/.mp/runtime/money_idle_phase2_state.tmp'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/scripts/money_idle_phase2.py", line 383, in <module>
+    "status": "stopped",
+^^
+object address  : 0x101573dc0
+object refcount : 3
+object type     : 0x101d6a9c0
+

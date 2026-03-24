@@ -28,7 +28,11 @@ from datetime import datetime
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
-VENV_PYTHON = ROOT_DIR / "venv" / "bin" / "python"
+sys.path.insert(0, str(ROOT_DIR / "src"))
+
+from runtime_python import resolve_runtime_python
+
+VENV_PYTHON = Path(resolve_runtime_python())
 
 SMART_SCRIPT = ROOT_DIR / "scripts" / "smart_post_twitter.py"
 VERIFY_SCRIPT = ROOT_DIR / "scripts" / "verify_twitter_posts.py"

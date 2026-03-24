@@ -14,7 +14,7 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).resolve().parent.parent
 TWITTER_CACHE = ROOT_DIR / ".mp" / "twitter.json"
 BACKUP_ROOT = ROOT_DIR / ".mp" / "profile_backups"
-RETENTION_COUNT = int(os.environ.get("MPV2_PROFILE_BACKUP_RETENTION", "5"))
+RETENTION_COUNT = int(os.environ.get("MPV2_PROFILE_BACKUP_RETENTION", "3"))
 MAX_BACKUP_AGE_SECONDS = int(os.environ.get("MPV2_PROFILE_BACKUP_MAX_AGE_SECONDS", str(24 * 60 * 60)))
 METADATA_NAME = "mpv2_profile_backup_metadata.json"
 
