@@ -68,7 +68,7 @@ def _is_profile_already_open(profile_path: str) -> bool:
     return False
 
 
-def _is_firefox_process_running() -> bool:
+def _is_firefox_process_running_for_profile(profile_path: str) -> bool:
     try:
         result = subprocess.run(
             ["pgrep", "-af", "Firefox.app/Contents/MacOS/firefox|/firefox"],
@@ -76,7 +76,10 @@ def _is_firefox_process_running() -> bool:
             text=True,
             check=False,
         )
-        return bool((result.stdout or "").strip())
+        for line in (result.stdout or "").splitlines():
+            if profile_path in line:
+                return True
+        return False
     except Exception:
         return False
 
@@ -120,7 +123,7 @@ def main() -> None:
         sys.exit(1)
 
     if _is_profile_already_open(profile_path):
-        if _is_firefox_process_running():
+        if _is_firefox_process_running_for_profile(profile_path):
             print("=" * 72)
             print(f"Account : {account.get('nickname', '?')}")
             if account.get("x_username"):
