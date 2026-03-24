@@ -264,6 +264,7 @@ def main() -> None:
             posted_count = _parse_posted_count(smart_output)
             post_status = _parse_post_status(smart_output)
             confidence_score, confidence_level = _parse_confidence(post_status)
+            pending_verification_post = post_status.startswith("posted:pending-verification")
             qualified_post = (
                 posted_count > 0
                 and confidence_score >= args.confidence_min_score
@@ -278,12 +279,18 @@ def main() -> None:
 
             cooldown_minutes = _parse_cooldown_minutes(smart_output)
 
-            # Run verify/backfill if qualified
-            run_verify_backfill = qualified_post or (args.verify_every > 0 and cycle_index % args.verify_every == 0)
+            # Run verify/backfill if qualified, or if X accepted the compose but permalink resolution lagged.
+            run_verify_backfill = (
+                qualified_post
+                or pending_verification_post
+                or (args.verify_every > 0 and cycle_index % args.verify_every == 0)
+            )
 
             verify_result = CmdResult(code=0, stdout="", stderr="")
             backfill_result = CmdResult(code=0, stdout="", stderr="")
             if run_verify_backfill:
+                if pending_verification_post:
+                    print("[idle-p2] Pending verification detected; running immediate verify/backfill follow-through.")
                 verify_cmd = [str(VENV_PYTHON), str(VERIFY_SCRIPT_PHASE3 if args.use_phase3 else VERIFY_SCRIPT), best_account]
                 verify_result = _run_cmd(verify_cmd, env)
 
@@ -334,6 +341,7 @@ def main() -> None:
                 "post_status": post_status,
                 "confidence_score": confidence_score,
                 "confidence_level": confidence_level,
+                "pending_verification_post": pending_verification_post,
                 "qualified_post": qualified_post,
                 "verify_backfill_ran": run_verify_backfill,
                 "account_state_after": updated_state["state"],

@@ -1204,30 +1204,48 @@ class Twitter:
             json.dump(parsed, file, indent=4)
         os.replace(tmp_path, cache_path)
 
-    def _verify_latest_post_phase3(self) -> dict:
+    def _verify_latest_post_phase3(self, attempts: int = 2, retry_delay_seconds: int = 8) -> dict:
         """
         Runs the Phase 3 verification pipeline against the newest cached post.
 
         Returns:
             result (dict): Lightweight verification summary.
         """
-        try:
-            result = self.verify_recent_cached_posts(limit=1, backfill=True)
-        except Exception as exc:
-            return {
-                "verified": False,
-                "tweet_url": "",
-                "match_method": "",
-                "error": str(exc),
-            }
+        attempts = max(1, int(attempts or 1))
+        retry_delay_seconds = max(0, int(retry_delay_seconds or 0))
 
-        latest = (result.get("results", []) or [{}])[0]
-        return {
-            "verified": bool(latest.get("verified", False)),
-            "tweet_url": str(latest.get("tweet_url", "") or ""),
-            "match_method": str(latest.get("match_method", "") or ""),
-            "error": str(result.get("error", "") or ""),
+        last_result = {
+            "verified": False,
+            "tweet_url": "",
+            "match_method": "",
+            "error": "",
         }
+
+        for attempt_index in range(attempts):
+            try:
+                result = self.verify_recent_cached_posts(limit=1, backfill=True)
+            except Exception as exc:
+                last_result = {
+                    "verified": False,
+                    "tweet_url": "",
+                    "match_method": "",
+                    "error": str(exc),
+                }
+                break
+
+            latest = (result.get("results", []) or [{}])[0]
+            last_result = {
+                "verified": bool(latest.get("verified", False)),
+                "tweet_url": str(latest.get("tweet_url", "") or ""),
+                "match_method": str(latest.get("match_method", "") or ""),
+                "error": str(result.get("error", "") or ""),
+            }
+            if last_result["verified"] or attempt_index >= attempts - 1:
+                break
+            if retry_delay_seconds > 0:
+                time.sleep(retry_delay_seconds)
+
+        return last_result
 
     def _parse_cached_post_datetime(self, date_text: str) -> Optional[datetime]:
         """
