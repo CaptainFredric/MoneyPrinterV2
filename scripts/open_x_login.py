@@ -20,6 +20,13 @@ from pathlib import Path
 
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
+SRC_DIR = ROOT_DIR / "src"
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
+
+from firefox_runtime import resolve_firefox_binary
+
+
 TWITTER_CACHE = ROOT_DIR / ".mp" / "twitter.json"
 
 
@@ -38,26 +45,6 @@ def _resolve_account(identifier: str) -> dict:
         if account.get("id", "").lower() == lowered or account.get("nickname", "").lower() == lowered:
             return account
     return {}
-
-
-def _find_firefox_binary() -> str:
-    candidates = []
-    if platform.system() == "Darwin":
-        candidates.extend(
-            [
-                "/Applications/Firefox.app/Contents/MacOS/firefox",
-                str(Path.home() / "Applications/Firefox.app/Contents/MacOS/firefox"),
-            ]
-        )
-
-    which_firefox = shutil.which("firefox")
-    if which_firefox:
-        candidates.append(which_firefox)
-
-    for candidate in candidates:
-        if candidate and os.path.exists(candidate):
-            return candidate
-    return ""
 
 
 def _is_profile_already_open(profile_path: str) -> bool:
@@ -117,7 +104,7 @@ def main() -> None:
         print(f"Invalid Firefox profile path: {profile_path or 'missing'}", file=sys.stderr)
         sys.exit(1)
 
-    firefox_binary = _find_firefox_binary()
+    firefox_binary = resolve_firefox_binary(str(account.get("browser_binary", "")).strip())
     if not firefox_binary:
         print("Could not find Firefox binary on this machine.", file=sys.stderr)
         sys.exit(1)
@@ -151,6 +138,7 @@ def main() -> None:
     print(f"Account : {account.get('nickname', '?')}")
     if account.get("x_username"):
         print(f"Handle  : {account['x_username']}")
+    print(f"Binary  : {firefox_binary}")
     print(f"Profile : {profile_path}")
     print(f"Opened  : {args.url}")
     print("")

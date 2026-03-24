@@ -342,5 +342,141 @@
       ]
     },
     "attempt_time": "2026-03-23T16:13:38.308386"
+  },
+  {
+    "timestamp": "2026-03-24T14:59:04.484767",
+    "account_uuid": "8d11dbfb-cdd8-4db7-9830-8ee115748e52",
+    "account_nickname": "EyeCatcher",
+    "action": "post_attempt",
+    "status": "pending",
+    "using_fallback_profile": true,
+    "reason": "unverified",
+    "text_snippet": "Your sense of smell can evoke memories from decades past, but did you know it's ",
+    "permalink_debug": {
+      "expected_handle": "eyecaughtthat2",
+      "compose_candidates": 6,
+      "compose_matching_candidates": 0,
+      "compose_samples": [
+        "https://x.com/mitocap_1216/status/2036415945762304112",
+        "https://x.com/sciencegirl/status/2036418726812062146",
+        "https://x.com/i/status/2036409757779837435",
+        "https://x.com/uncledoomer/status/2036458489904615495",
+        "https://x.com/i/status/2010097397259743257"
+      ],
+      "profile_candidates": 0,
+      "timeline_items": 0,
+      "search_queries_tried": [
+        "https://x.com/search?q=from%3AEyeCaughtThat2+sense+smell+evoke&src=typed_query&f=live",
+        "https://x.com/search?q=from%3AEyeCaughtThat2+%23sensorymemory+sense&src=typed_query&f=live",
+        "https://x.com/search?q=from%3AEyeCaughtThat2+sense+smell+evoke&src=typed_query&f=live",
+        "https://x.com/search?q=from%3AEyeCaughtThat2+sense+smell+evoke&src=typed_query&f=live"
+      ],
+      "match_method": "",
+      "pages_tried": [
+        "https://x.com/EyeCaughtThat2",
+        "https://x.com/EyeCaughtThat2/with_replies",
+        "https://x.com/search?q=from%3AEyeCaughtThat2&src=typed_query&f=live",
+        "https://x.com/EyeCaughtThat2",
+        "https://x.com/EyeCaughtThat2/with_replies",
+        "https://x.com/search?q=from%3AEyeCaughtThat2&src=typed_query&f=live",
+        "https://x.com/EyeCaughtThat2",
+        "https://x.com/EyeCaughtThat2/with_replies",
+        "https://x.com/search?q=from%3AEyeCaughtThat2&src=typed_query&f=live",
+        "https://x.com/EyeCaughtThat2",
+        "https://x.com/EyeCaughtThat2/with_replies",
+        "https://x.com/search?q=from%3AEyeCaughtThat2&src=typed_query&f=live",
+        "https://x.com/EyeCaughtThat2",
+        "https://x.com/EyeCaughtThat2/with_replies",
+        "https://x.com/search?q=from%3AEyeCaughtThat2&src=typed_query&f=live"
+      ]
+    },
+    "confidence_score": 35,
+    "confidence_level": "low",
+    "phase3_verified": false,
+    "phase3_match_method": "",
+    "attempt_time": "2026-03-24T14:55:43.295830"
+  },
+  {
+    "timestamp": "2026-03-24T15:08:30.733470",
+    "account_uuid": "8d11dbfb-cdd8-4db7-9830-8ee115748e52",
+    "account_nickname": "EyeCatcher",
+    "action": "post_attempt",
+    "status": "skipped",
+    "using_fallback_profile": true,
+    "reason": "cooldown:17m",
+    "attempt_time": "2026-03-24T15:08:30.669113"
+  },
+  {
+    "timestamp": "2026-03-24T15:16:27.235939",
+    "account_uuid": "8d11dbfb-cdd8-4db7-9830-8ee115748e52",
+    "account_nickname": "EyeCatcher",
+    "action": "post_attempt",
+    "status": "skipped",
+    "using_fallback_profile": true,
+    "reason": "cooldown:9m",
+    "attempt_time": "2026-03-24T15:16:27.204305"
+  },
+  {
+    "timestamp": "2026-03-24T15:19:18.795940",
+    "account_uuid": "8d11dbfb-cdd8-4db7-9830-8ee115748e52",
+    "account_nickname": "EyeCatcher",
+    "action": "post_attempt",
+    "status": "skipped",
+    "using_fallback_profile": true,
+    "reason": "cooldown:6m",
+    "attempt_time": "2026-03-24T15:19:18.618225"
+  },
+  {
+    "timestamp": "2026-03-24T15:43:31.642572",
+    "account_uuid": "8d11dbfb-cdd8-4db7-9830-8ee115748e52",
+    "account_nickname": "EyeCatcher",
+    "action": "post_attempt",
+    "status": "pending",
+    "using_fallback_profile": false,
+    "reason": "unverified",
+    "text_snippet": "Ever wondered why our brains are wired to remember the taste of a favorite child",
+    "permalink_debug": {
+      "expected_handle": "eyecaughtthat2",
+      "compose_candidates": 5,
+      "compose_matching_candidates": 0,
+      "compose_samples": [
+        "https://x.com/DudespostingWs/status/2036445565580415460",
+        "https://x.com/i/status/1966033629974507772",
+        "https://x.com/NeverteIImeodd/status/2036256500923105740",
+        "https://x.com/nostalgiaa/status/2036289464155222071",
+        "https://x.com/ycombinator/status/2036512648326684820"
+      ],
+      "profile_candidates": 0,
+      "timeline_items": 0,
+      "search_queries_tried": [
+        "https://x.com/search?q=from%3AEyeCaughtThat2+wondered+brains+wired&src=typed_query&f=live",
+        "https://x.com/search?q=from%3AEyeCaughtThat2+%23smellmemory+%23tastetriggers+wondered&src=typed_query&f=live",
+        "https://x.com/search?q=from%3AEyeCaughtThat2+wondered+brains+wired&src=typed_query&f=live",
+        "https://x.com/search?q=from%3AEyeCaughtThat2+wondered+brains+wired&src=typed_query&f=live"
+      ],
+      "match_method": "",
+      "pages_tried": [
+        "https://x.com/EyeCaughtThat2",
+        "https://x.com/EyeCaughtThat2/with_replies",
+        "https://x.com/search?q=from%3AEyeCaughtThat2&src=typed_query&f=live",
+        "https://x.com/EyeCaughtThat2",
+        "https://x.com/EyeCaughtThat2/with_replies",
+        "https://x.com/search?q=from%3AEyeCaughtThat2&src=typed_query&f=live",
+        "https://x.com/EyeCaughtThat2",
+        "https://x.com/EyeCaughtThat2/with_replies",
+        "https://x.com/search?q=from%3AEyeCaughtThat2&src=typed_query&f=live",
+        "https://x.com/EyeCaughtThat2",
+        "https://x.com/EyeCaughtThat2/with_replies",
+        "https://x.com/search?q=from%3AEyeCaughtThat2&src=typed_query&f=live",
+        "https://x.com/EyeCaughtThat2",
+        "https://x.com/EyeCaughtThat2/with_replies",
+        "https://x.com/search?q=from%3AEyeCaughtThat2&src=typed_query&f=live"
+      ]
+    },
+    "confidence_score": 35,
+    "confidence_level": "low",
+    "phase3_verified": false,
+    "phase3_match_method": "",
+    "attempt_time": "2026-03-24T15:39:54.827940"
   }
 ]

@@ -16,6 +16,7 @@ from urllib.parse import quote_plus, urlparse
 from cache import *
 from config import *
 from status import *
+from firefox_runtime import resolve_firefox_binary
 from publish_verification_hardener import PublishVerificationHardener
 from typing import List, Optional
 from datetime import datetime, timedelta
@@ -36,7 +37,12 @@ class Twitter:
     """
 
     def __init__(
-        self, account_uuid: str, account_nickname: str, fp_profile_path: str, topic: str
+        self,
+        account_uuid: str,
+        account_nickname: str,
+        fp_profile_path: str,
+        topic: str,
+        browser_binary: str = "",
     ) -> None:
         """
         Initializes the Twitter Bot.
@@ -53,6 +59,7 @@ class Twitter:
         self.account_nickname: str = account_nickname
         self.fp_profile_path: str = fp_profile_path
         self.topic: str = topic
+        self.browser_binary: str = resolve_firefox_binary(browser_binary)
         self.using_fallback_profile: bool = False
         self.fallback_profile_path: str = ""
         self.post_attempt_timestamp: Optional[datetime] = None
@@ -64,9 +71,8 @@ class Twitter:
         # Initialize the Firefox profile
         self.options: Options = Options()
 
-        firefox_app_binary = "/Applications/Firefox.app/Contents/MacOS/firefox"
-        if platform.system() == "Darwin" and os.path.exists(firefox_app_binary):
-            self.options.binary_location = firefox_app_binary
+        if self.browser_binary:
+            self.options.binary_location = self.browser_binary
 
         # Set headless state of browser
         if get_headless():
@@ -104,8 +110,8 @@ class Twitter:
                         pass
 
             fallback_options: Options = Options()
-            if platform.system() == "Darwin" and os.path.exists(firefox_app_binary):
-                fallback_options.binary_location = firefox_app_binary
+            if self.browser_binary:
+                fallback_options.binary_location = self.browser_binary
             if get_headless():
                 fallback_options.add_argument("--headless")
             fallback_options.add_argument("-profile")
@@ -753,12 +759,13 @@ class Twitter:
 
                 if live_handle and self._profile_visibility_issue(live_handle):
                     return {
-                        "ready": False,
-                        "reason": "profile-posts-unavailable",
+                        "ready": True,
+                        "reason": "ready-profile-visibility-warning",
                         "current_url": self.browser.current_url,
                         "handle": live_handle,
                         "configured_handle": configured_handle,
                         "using_fallback_profile": self.using_fallback_profile,
+                        "profile_visibility_issue": True,
                     }
 
                 return {

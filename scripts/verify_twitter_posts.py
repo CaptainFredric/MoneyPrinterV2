@@ -55,6 +55,7 @@ def _verify_account(account: dict, limit: int) -> tuple[bool, dict]:
         account.get("nickname", account["id"][:8]),
         account["firefox_profile"],
         account.get("topic", ""),
+        account.get("browser_binary", ""),
     )
     try:
         result = twitter.verify_recent_cached_posts(limit=limit, backfill=True)
