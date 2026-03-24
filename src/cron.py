@@ -1,5 +1,7 @@
 # RUN THIS N AMOUNT OF TIMES
+import os
 import sys
+from pathlib import Path
 
 from status import *
 from cache import get_accounts
@@ -8,6 +10,32 @@ from classes.Tts import TTS
 from classes.Twitter import Twitter
 from classes.YouTube import YouTube
 from llm_provider import select_model
+
+
+ROOT_DIR = Path(__file__).resolve().parent.parent
+POST_LOCK_DIR = ROOT_DIR / ".mp" / "runtime" / "post_locks"
+
+
+def _acquire_post_lock(account_nickname: str) -> Path | None:
+    POST_LOCK_DIR.mkdir(parents=True, exist_ok=True)
+    safe_name = "".join(ch if ch.isalnum() or ch in {"-", "_"} else "_" for ch in (account_nickname or "unknown"))
+    lock_path = POST_LOCK_DIR / f"{safe_name}.lock"
+    try:
+        fd = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write(str(os.getpid()))
+        return lock_path
+    except FileExistsError:
+        return None
+
+
+def _release_post_lock(lock_path: Path | None) -> None:
+    if not lock_path:
+        return
+    try:
+        lock_path.unlink(missing_ok=True)
+    except Exception:
+        pass
 
 def main():
     """Main function to post content to Twitter or upload videos to YouTube.
@@ -53,6 +81,11 @@ def main():
 
         if verbose:
             info("Initializing Twitter...")
+        lock_path = _acquire_post_lock(matched_acc["nickname"])
+        if lock_path is None:
+            print("MPV2_POST_STATUS:skipped:account-busy")
+            warning(f"Twitter account '{matched_acc['nickname']}' is already being processed by another run.")
+            sys.exit(0)
         twitter = Twitter(
             matched_acc["id"],
             matched_acc["nickname"],
@@ -68,6 +101,8 @@ def main():
         except Exception as exc:
             error(f"Twitter post failed: {exc}")
             sys.exit(1)
+        finally:
+            _release_post_lock(lock_path)
         if verbose:
             success("Done posting.")
     elif purpose == "youtube":

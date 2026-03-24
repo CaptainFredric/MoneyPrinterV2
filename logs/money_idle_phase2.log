@@ -172,3 +172,65 @@ Summary: Cleaned 0 | Skipped 2
 niche_launch_1       | ACTIVE     | health= 54 | last=
 EyeCatcher           | DEGRADED   | health= 62 | last=failed:login-required
 [idle-p2] Sleeping 15 minute(s) before next cycle.
+
+[idle-p2] ========== Cycle 7 started at 2026-03-24T12:38:06 ==========
+[idle-p2] Selected account: niche_launch_1 (active:health=54)
+▶ Smart attempt: niche_launch_1
+⏭️  Skip niche_launch_1: cron-timeout:300s
+MPV2_SMART_STATUS:niche_launch_1:skipped
+Smart attempts: 1 | posted: 0
+[idle-p2] Account niche_launch_1 transitioned to: active
+[idle-p2] Account health score: 54
+[idle-p2] Skipping verify/backfill this cycle (no qualified post, non-maintenance cycle).
+[idle-p2] Account states summary:
+niche_launch_1       | ACTIVE     | health= 54 | last=
+EyeCatcher           | DEGRADED   | health= 62 | last=failed:login-required
+[idle-p2] Sleeping 22 minute(s) before next cycle.
+
+[idle-p2] ========== Cycle 8 started at 2026-03-24T13:05:13 ==========
+[idle-p2] Selected account: niche_launch_1 (active:health=54)
+▶ Smart attempt: niche_launch_1
+⏭️  Skip niche_launch_1: cron-timeout:300s
+MPV2_SMART_STATUS:niche_launch_1:skipped
+Smart attempts: 1 | posted: 0
+[idle-p2] Account niche_launch_1 transitioned to: active
+[idle-p2] Account health score: 54
+[idle-p2] Skipping verify/backfill this cycle (no qualified post, non-maintenance cycle).
+========================================================================
+Account : niche_launch_1
+Handle  : @NicheNewton
+Ready   : YES
+Reason  : ready-cookie-auth
+Cookies : auth=2
+========================================================================
+Account : EyeCatcher
+Handle  : @EyeCaughtThat2
+Ready   : NO
+Reason  : login-required
+Cookies : auth=0
+========================================================================
+Accounts checked : 2
+Profiles blocked : 1
+[idle-p2] Account states summary:
+niche_launch_1       | ACTIVE     | health= 54 | last=
+EyeCatcher           | DEGRADED   | health= 62 | last=failed:login-required
+[idle-p2] Sleeping 16 minute(s) before next cycle.
+
+[idle-p2] ========== Cycle 9 started at 2026-03-24T13:26:40 ==========
+[idle-p2] Selected account: niche_launch_1 (active:health=54)
+▶ Smart attempt: niche_launch_1
+⏭️  Skip niche_launch_1: cron-timeout:300s
+MPV2_SMART_STATUS:niche_launch_1:skipped
+Smart attempts: 1 | posted: 0
+[idle-p2] Account niche_launch_1 transitioned to: active
+[idle-p2] Account health score: 54
+
+[idle-p2] timeout after 420s
+
+[idle-p2] timeout after 420s
+[idle-p2] Account states summary:
+niche_launch_1       | ACTIVE     | health= 54 | last=
+EyeCatcher           | DEGRADED   | health= 62 | last=failed:login-required
+[idle-p2] Sleeping 21 minute(s) before next cycle.
+[idle-p2] Received signal 15; shutting down cleanly.
+[idle-p2] Exited cleanly.
