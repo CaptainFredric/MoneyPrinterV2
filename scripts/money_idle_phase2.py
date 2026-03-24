@@ -40,6 +40,7 @@ VENV_PYTHON = ROOT_DIR / "venv" / "bin" / "python"
 
 SMART_SCRIPT = ROOT_DIR / "scripts" / "smart_post_twitter.py"
 VERIFY_SCRIPT = ROOT_DIR / "scripts" / "verify_twitter_posts.py"
+VERIFY_SCRIPT_PHASE3 = ROOT_DIR / "scripts" / "verify_twitter_posts_phase3.py"
 BACKFILL_SCRIPT = ROOT_DIR / "scripts" / "backfill_pending_twitter.py"
 SESSION_SCRIPT = ROOT_DIR / "scripts" / "check_x_session.py"
 CLEANUP_SCRIPT = ROOT_DIR / "scripts" / "cleanup_stale_locks.py"
@@ -178,6 +179,7 @@ def main() -> None:
     parser.add_argument("--verify-every", type=int, default=3, help="run verify/backfill every N cycles when no qualified post")
     parser.add_argument("--confidence-min-score", type=int, default=int(os.environ.get("MPV2_CONFIDENCE_MIN_SCORE", "80")))
     parser.add_argument("--fast-retry-minutes", type=int, default=4, help="short retry sleep when post confidence is below threshold")
+    parser.add_argument("--use-phase3", action="store_true", help="use Phase 3 enhanced verification (better matching)")
     parser.add_argument("--once", action="store_true", help="run one cycle and exit")
     args = parser.parse_args()
 
@@ -276,7 +278,7 @@ def main() -> None:
             verify_result = CmdResult(code=0, stdout="", stderr="")
             backfill_result = CmdResult(code=0, stdout="", stderr="")
             if run_verify_backfill:
-                verify_cmd = [str(VENV_PYTHON), str(VERIFY_SCRIPT), best_account]
+                verify_cmd = [str(VENV_PYTHON), str(VERIFY_SCRIPT_PHASE3 if args.use_phase3 else VERIFY_SCRIPT), best_account]
                 verify_result = _run_cmd(verify_cmd, env)
 
                 backfill_cmd = [str(VENV_PYTHON), str(BACKFILL_SCRIPT), best_account, "--headless"]
