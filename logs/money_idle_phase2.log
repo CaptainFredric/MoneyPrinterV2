@@ -1,14 +1,49 @@
 
-[idle-p2] ========== Cycle 1 started at 2026-03-24T14:21:40 ==========
-[idle-p2] Selected account: niche_launch_1 (active:health=54)
-▶ Smart attempt: niche_launch_1
-⏭️  Skip niche_launch_1: cron-timeout:300s
-MPV2_SMART_STATUS:niche_launch_1:skipped
+[idle-p2] ========== Cycle 1 started at 2026-03-24T15:18:35 ==========
+[idle-p2] Selected account: EyeCatcher (degraded:health=62)
+▶ Smart attempt: EyeCatcher
+ℹ️ Initializing Twitter...
+ℹ️ Selected post mode: text
+ℹ️ Generating a post...
+ℹ️ Tweet length: 238 chars
+⚠️ Cooldown active: cooldown:6m
+MPV2_POST_STATUS:skipped:cooldown:6m
+✅ Done posting.
+MPV2_SMART_STATUS:EyeCatcher:skipped
 Smart attempts: 1 | posted: 0
-[idle-p2] Account niche_launch_1 transitioned to: active
+[idle-p2] Account EyeCatcher transitioned to: degraded
+[idle-p2] Account health score: 62
+[idle-p2] Skipping verify/backfill this cycle (no qualified post, non-maintenance cycle).
+[idle-p2] Account states summary:
+niche_launch_1       | ACTIVE     | health= 54 | last=
+EyeCatcher           | DEGRADED   | health= 62 | last=skipped:cooldown:6m
+[idle-p2] Sleeping 20 minute(s) before next cycle.
+
+[idle-p2] ========== Cycle 2 started at 2026-03-24T15:39:27 ==========
+[idle-p2] Selected account: EyeCatcher (degraded:health=62)
+▶ Smart attempt: EyeCatcher
+ℹ️ Initializing Twitter...
+ℹ️ Selected post mode: text
+ℹ️ Generating a post...
+ℹ️ Tweet length: 198 chars
+ => Posting to Twitter: Ever wondered why our brains are wired to remember...
+ => Pressed [ENTER] Button on Twitter..
+⚠️ X accepted compose, but permalink lookup is delayed/unavailable. Saving as pending verification for later backfill.
+MPV2_POST_STATUS:posted:pending-verification:confidence=35:level=low
+✅ Done posting.
+⏭️  Skip EyeCatcher: low-confidence:score=35:level=low
+MPV2_SMART_STATUS:EyeCatcher:skipped
+Smart attempts: 1 | posted: 0
+[idle-p2] Account EyeCatcher transitioned to: cooldown
 [idle-p2] Account health score: 54
 [idle-p2] Skipping verify/backfill this cycle (no qualified post, non-maintenance cycle).
 [idle-p2] Account states summary:
 niche_launch_1       | ACTIVE     | health= 54 | last=
-EyeCatcher           | DEGRADED   | health= 62 | last=failed:login-required
-[idle-p2] Sleeping 16 minute(s) before next cycle.
+EyeCatcher           | COOLDOWN   | health= 54 | last=posted:pending-verification:confidence=35:level=lo
+[idle-p2] Sleeping 8 minute(s) before next cycle.
+
+[idle-p2] ========== Cycle 3 started at 2026-03-24T15:51:35 ==========
+[idle-p2] No eligible accounts available. All in cooldown/blocked/paused state.
+niche_launch_1       | ACTIVE     | health= 54 | last=
+EyeCatcher           | COOLDOWN   | health= 54 | last=posted:pending-verification:confidence=35:level=lo
+[idle-p2] Sleeping 5 minutes before retry.

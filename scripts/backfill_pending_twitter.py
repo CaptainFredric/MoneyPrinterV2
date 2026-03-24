@@ -60,6 +60,7 @@ def _run_backfill_for_account(account: dict, limit: int) -> dict:
         nickname,
         account["firefox_profile"],
         account.get("topic", ""),
+        account.get("browser_binary", ""),
     )
     try:
         return twitter.verify_pending_cached_posts(limit=limit, backfill=True)

@@ -15,11 +15,15 @@
 #   phone_post.sh performance  → show linear growth phase + next objective
 #   phone_post.sh next         → run linear next-step sequence (performance + autotune preview + status)
 #   phone_post.sh login <id>   → open the exact Firefox profile for X login repair
+#   phone_post.sh login-auto <id> → restore latest saved session, open profile, and verify readiness
 #   phone_post.sh login-all     → open all configured Firefox profiles for X login repair
 #   phone_post.sh login-prep    → stop automation + geckodriver, then open all login profiles
 #   phone_post.sh session <id> → check whether the X session/profile is ready to post
 #   phone_post.sh session-all  → check X session readiness for all accounts
 #   phone_post.sh session-watch <id|all> [seconds] → passive watch mode for login progress
+#   phone_post.sh session-backup <id|all> → save a restore point for Firefox login sessions
+#   phone_post.sh session-backups [id|all] → list saved session restore points
+#   phone_post.sh session-restore <id> [archive|latest] → restore a saved Firefox login session
 #   phone_post.sh verify <id>  → verify recent cached posts against live X timeline
 #   phone_post.sh verify-all   → verify recent cached posts for all accounts
 #   phone_post.sh autotune      → preview ratio tuning changes (dry-run)
@@ -46,7 +50,30 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-VENV_PYTHON="$ROOT_DIR/venv/bin/python"
+
+resolve_python() {
+    local candidates=()
+    candidates+=("${MPV2_PYTHON:-}")
+    candidates+=("$ROOT_DIR/venv/bin/python")
+    candidates+=("$ROOT_DIR/.venv/bin/python")
+    candidates+=("$(command -v python3 2>/dev/null || true)")
+    candidates+=("$(command -v python 2>/dev/null || true)")
+
+    local candidate
+    for candidate in "${candidates[@]}"; do
+        [[ -n "$candidate" ]] || continue
+        [[ -x "$candidate" ]] || continue
+        printf '%s\n' "$candidate"
+        return 0
+    done
+    return 1
+}
+
+VENV_PYTHON="$(resolve_python)"
+if [[ -z "$VENV_PYTHON" ]]; then
+    echo "Could not find a usable Python interpreter." >&2
+    exit 1
+fi
 
 # Load .env if present (picks up GEMINI_API_KEY etc.)
 if [[ -f "$ROOT_DIR/.env" ]]; then
@@ -152,6 +179,14 @@ case "$MODE" in
         stop_automation_processes
         "$VENV_PYTHON" scripts/open_x_login.py "$TARGET"
         ;;
+    login-auto)
+        stop_automation_processes
+        "$VENV_PYTHON" scripts/twitter_profile_backup.py restore "$TARGET" latest --allow-missing || true
+        echo ""
+        "$VENV_PYTHON" scripts/open_x_login.py "$TARGET" --url https://x.com/home
+        echo ""
+        "$VENV_PYTHON" scripts/check_x_session.py "$TARGET" --no-fail --backup-on-ready
+        ;;
     login-all)
         stop_automation_processes
         found_any=0
@@ -184,15 +219,26 @@ case "$MODE" in
         fi
         ;;
     session)
-        "$VENV_PYTHON" scripts/check_x_session.py "$TARGET" --no-fail
+        "$VENV_PYTHON" scripts/check_x_session.py "$TARGET" --no-fail --backup-on-ready
         ;;
     session-all)
-        "$VENV_PYTHON" scripts/check_x_session.py all --no-fail
+        "$VENV_PYTHON" scripts/check_x_session.py all --no-fail --backup-on-ready
         ;;
     session-watch)
         watch_target="${TARGET:-all}"
         watch_seconds="${3:-10}"
         "$VENV_PYTHON" scripts/check_x_session.py "$watch_target" --watch "$watch_seconds" --no-fail
+        ;;
+    session-backup)
+        "$VENV_PYTHON" scripts/twitter_profile_backup.py backup "$TARGET"
+        ;;
+    session-backups)
+        "$VENV_PYTHON" scripts/twitter_profile_backup.py status "$TARGET"
+        ;;
+    session-restore)
+        stop_automation_processes
+        archive_name="${3:-latest}"
+        "$VENV_PYTHON" scripts/twitter_profile_backup.py restore "$TARGET" "$archive_name"
         ;;
     verify)
         "$VENV_PYTHON" scripts/verify_twitter_posts.py "$TARGET"

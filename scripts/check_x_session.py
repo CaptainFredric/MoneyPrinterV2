@@ -13,9 +13,6 @@ Usage:
 import argparse
 import json
 import sys
-import sqlite3
-import tempfile
-import shutil
 import time
 from pathlib import Path
 
@@ -26,6 +23,9 @@ if str(SRC_DIR) not in sys.path:
 
 
 TWITTER_CACHE = ROOT_DIR / ".mp" / "twitter.json"
+
+from twitter_session_backup import backup_account_profile
+from twitter_session_backup import count_auth_cookies
 
 
 def _load_accounts() -> list[dict]:
@@ -57,49 +57,28 @@ def _check_account_active(account: dict) -> dict:
         account.get("nickname", account["id"][:8]),
         account["firefox_profile"],
         account.get("topic", ""),
+        account.get("browser_binary", ""),
     )
     try:
         status = twitter.check_session()
         status["account"] = account.get("nickname", "?")
         status["configured_handle"] = str(account.get("x_username", "")).lstrip("@")
+        auth_cookie_count = count_auth_cookies(Path(str(account.get("firefox_profile", "")).strip()))
+        status["auth_cookie_count"] = auth_cookie_count
+
+        lowered_url = str(status.get("current_url", "")).lower()
+        if (
+            not status.get("ready")
+            and status.get("reason") == "compose-ui-missing"
+            and auth_cookie_count >= 1
+            and "/home" in lowered_url
+        ):
+            status["ready"] = True
+            status["reason"] = "ready-home-cookie-fallback"
         return status
     finally:
         try:
             twitter.browser.quit()
-        except Exception:
-            pass
-
-
-def _count_auth_cookies(profile_path: Path) -> int:
-    cookies_db = profile_path / "cookies.sqlite"
-    if not cookies_db.exists():
-        return 0
-
-    with tempfile.NamedTemporaryFile(prefix="mpv2_cookies_", suffix=".sqlite", delete=False) as temp_file:
-        temp_path = Path(temp_file.name)
-
-    try:
-        shutil.copy2(cookies_db, temp_path)
-        conn = sqlite3.connect(str(temp_path))
-        try:
-            cursor = conn.cursor()
-            cursor.execute(
-                """
-                SELECT COUNT(*)
-                FROM moz_cookies
-                WHERE (host LIKE '%x.com%' OR host LIKE '%twitter.com%')
-                  AND name IN ('auth_token', 'ct0')
-                """
-            )
-            row = cursor.fetchone()
-            return int(row[0]) if row else 0
-        finally:
-            conn.close()
-    except Exception:
-        return 0
-    finally:
-        try:
-            temp_path.unlink(missing_ok=True)
         except Exception:
             pass
 
@@ -115,7 +94,7 @@ def _check_account_passive(account: dict) -> dict:
             "current_url": "",
         }
 
-    auth_cookie_count = _count_auth_cookies(profile_path)
+    auth_cookie_count = count_auth_cookies(profile_path)
     ready = auth_cookie_count >= 1
     return {
         "account": account.get("nickname", "?"),
@@ -134,6 +113,7 @@ def main() -> None:
     parser.add_argument("--active", action="store_true", help="use webdriver-based session check (can interrupt manual login)")
     parser.add_argument("--no-fail", action="store_true", help="always exit 0 (status reporting only)")
     parser.add_argument("--watch", type=int, default=0, help="repeat passive checks every N seconds (0 = once)")
+    parser.add_argument("--backup-on-ready", action="store_true", help="create or refresh a profile backup when the session is ready")
     args = parser.parse_args()
 
     if args.active and args.watch > 0:
@@ -156,6 +136,9 @@ def main() -> None:
                 status = _check_account_active(account)
             else:
                 status = _check_account_passive(account)
+            backup_result = None
+            if status.get("ready") and args.backup_on_ready:
+                backup_result = backup_account_profile(account)
             print("=" * 72)
             print(f"Account : {status.get('account', '?')}")
             if status.get("configured_handle"):
@@ -168,6 +151,10 @@ def main() -> None:
                 print("Hint    : Close Firefox windows using this profile, then rerun session check.")
             if status.get("current_url"):
                 print(f"URL     : {status['current_url']}")
+            if backup_result:
+                print(f"Backup  : {'created' if backup_result.get('created') else 'skipped'}:{backup_result.get('reason', 'unknown')}")
+                if backup_result.get("path"):
+                    print(f"Archive : {backup_result['path']}")
             if not status.get("ready"):
                 failures_local += 1
 

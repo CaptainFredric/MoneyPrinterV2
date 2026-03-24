@@ -227,6 +227,7 @@ class AffiliateMarketing:
                 self.account_nickname,
                 self._fp_profile_path,
                 self.topic,
+                "",
             )
 
             # Share the pitch

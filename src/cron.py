@@ -16,17 +16,48 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 POST_LOCK_DIR = ROOT_DIR / ".mp" / "runtime" / "post_locks"
 
 
+def _pid_is_running(pid_value: str) -> bool:
+    try:
+        pid = int(str(pid_value).strip())
+    except Exception:
+        return False
+
+    if pid <= 0:
+        return False
+
+    try:
+        os.kill(pid, 0)
+        return True
+    except OSError:
+        return False
+
+
 def _acquire_post_lock(account_nickname: str) -> Path | None:
     POST_LOCK_DIR.mkdir(parents=True, exist_ok=True)
     safe_name = "".join(ch if ch.isalnum() or ch in {"-", "_"} else "_" for ch in (account_nickname or "unknown"))
     lock_path = POST_LOCK_DIR / f"{safe_name}.lock"
-    try:
-        fd = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-        with os.fdopen(fd, "w", encoding="utf-8") as fh:
-            fh.write(str(os.getpid()))
-        return lock_path
-    except FileExistsError:
-        return None
+
+    for _ in range(2):
+        try:
+            fd = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                fh.write(str(os.getpid()))
+            return lock_path
+        except FileExistsError:
+            try:
+                pid_value = lock_path.read_text(encoding="utf-8").strip()
+            except Exception:
+                pid_value = ""
+
+            if _pid_is_running(pid_value):
+                return None
+
+            try:
+                lock_path.unlink(missing_ok=True)
+            except Exception:
+                return None
+
+    return None
 
 
 def _release_post_lock(lock_path: Path | None) -> None:
@@ -90,7 +121,8 @@ def main():
             matched_acc["id"],
             matched_acc["nickname"],
             matched_acc["firefox_profile"],
-            matched_acc["topic"]
+            matched_acc["topic"],
+            matched_acc.get("browser_binary", ""),
         )
         try:
             post_status = twitter.post()
