@@ -285,3 +285,796 @@ Traceback (most recent call last):
     raise ValueError(
 ValueError: Firefox profile path does not exist or is not a directory: /Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/secrets/twitter_automation_profile_v2
 [idle] Sleeping 19 minute(s) before next cycle.
+[idle] Cycle 9 started at 2026-03-23T22:37:08
+▶ Smart attempt: niche_launch_1
+⏭️  Skip niche_launch_1: cron-timeout:300s
+MPV2_SMART_STATUS:niche_launch_1:skipped
+Smart attempts: 1 | posted: 0
+========================================================================
+Account : niche_launch_1
+Checked : 3
+Verified: 0
+Error   : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Verified posts   : 0
+========================================================================
+Account : niche_launch_1
+Pending Checked : 6
+Backfilled OK   : 0
+Error          : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Pending checked  : 6
+Backfilled total : 0
+[idle] Sleeping 8 minute(s) before next cycle.
+[idle] Cycle 10 started at 2026-03-23T22:50:37
+▶ Smart attempt: niche_launch_1
+ℹ️ Initializing Twitter...
+⚠️ X session not ready for posting: login-required
+MPV2_POST_STATUS:failed:login-required
+❌ Twitter post verification failed: failed:login-required
+MPV2_SMART_STATUS:niche_launch_1:skipped
+Smart attempts: 1 | posted: 0
+========================================================================
+Account : niche_launch_1
+Checked : 3
+Verified: 0
+Error   : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Verified posts   : 0
+========================================================================
+Account : niche_launch_1
+Pending Checked : 6
+Backfilled OK   : 0
+Error          : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Pending checked  : 6
+Backfilled total : 0
+[idle] Sleeping 20 minute(s) before next cycle.
+[idle] Cycle 11 started at 2026-03-23T23:12:59
+▶ Smart attempt: niche_launch_1
+ℹ️ Initializing Twitter...
+⚠️ X session not ready for posting: login-required
+MPV2_POST_STATUS:failed:login-required
+❌ Twitter post verification failed: failed:login-required
+MPV2_SMART_STATUS:niche_launch_1:skipped
+Smart attempts: 1 | posted: 0
+========================================================================
+Account : niche_launch_1
+Checked : 3
+Verified: 0
+Error   : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Verified posts   : 0
+========================================================================
+Account : niche_launch_1
+Pending Checked : 6
+Backfilled OK   : 0
+Error          : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Pending checked  : 6
+Backfilled total : 0
+[idle] Sleeping 14 minute(s) before next cycle.
+[idle] Cycle 12 started at 2026-03-23T23:30:52
+▶ Smart attempt: niche_launch_1
+ℹ️ Initializing Twitter...
+⚠️ X session not ready for posting: login-required
+MPV2_POST_STATUS:failed:login-required
+❌ Twitter post verification failed: failed:login-required
+MPV2_SMART_STATUS:niche_launch_1:skipped
+Smart attempts: 1 | posted: 0
+========================================================================
+Account : niche_launch_1
+Checked : 3
+Verified: 0
+Error   : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Verified posts   : 0
+========================================================================
+Account : niche_launch_1
+Pending Checked : 6
+Backfilled OK   : 0
+Error          : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Pending checked  : 6
+Backfilled total : 0
+
+============================================================
+Firefox Profile Lock Cleanup Utility
+============================================================
+
+
+📁 niche_launch_1
+   Profile: /Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/secrets/twitter_automation_profile_v3
+ℹ️  Skipped (active): .parentlock
+
+📁 EyeCatcher
+   Profile: /Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/secrets/twitter_automation_profile_v2
+⚠️  Profile directory not found
+
+============================================================
+Summary: Cleaned 0 | Skipped 2
+============================================================
+
+========================================================================
+Account : niche_launch_1
+Handle  : @NicheNewton
+Ready   : NO
+Reason  : login-required
+URL     : https://x.com/i/flow/login?redirect_after_login=%2Fhome
+Traceback (most recent call last):
+  File "/Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/scripts/check_x_session.py", line 109, in <module>
+    main()
+  File "/Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/scripts/check_x_session.py", line 86, in main
+    status = _check_account(account)
+             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/scripts/check_x_session.py", line 51, in _check_account
+    twitter = Twitter(
+              ^^^^^^^^
+  File "/Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/src/classes/Twitter.py", line 77, in __init__
+    raise ValueError(
+ValueError: Firefox profile path does not exist or is not a directory: /Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/secrets/twitter_automation_profile_v2
+[idle] Sleeping 18 minute(s) before next cycle.
+[idle] Cycle 13 started at 2026-03-23T23:49:55
+▶ Smart attempt: niche_launch_1
+ℹ️ Initializing Twitter...
+⚠️ X session not ready for posting: login-required
+MPV2_POST_STATUS:failed:login-required
+❌ Twitter post verification failed: failed:login-required
+MPV2_SMART_STATUS:niche_launch_1:skipped
+Smart attempts: 1 | posted: 0
+========================================================================
+Account : niche_launch_1
+Checked : 3
+Verified: 0
+Error   : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Verified posts   : 0
+========================================================================
+Account : niche_launch_1
+Pending Checked : 6
+Backfilled OK   : 0
+Error          : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Pending checked  : 6
+Backfilled total : 0
+[idle] Sleeping 18 minute(s) before next cycle.
+[idle] Cycle 14 started at 2026-03-24T00:09:09
+▶ Smart attempt: niche_launch_1
+ℹ️ Initializing Twitter...
+⚠️ X session not ready for posting: login-required
+MPV2_POST_STATUS:failed:login-required
+❌ Twitter post verification failed: failed:login-required
+MPV2_SMART_STATUS:niche_launch_1:skipped
+Smart attempts: 1 | posted: 0
+========================================================================
+Account : niche_launch_1
+Checked : 3
+Verified: 0
+Error   : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Verified posts   : 0
+========================================================================
+Account : niche_launch_1
+Pending Checked : 6
+Backfilled OK   : 0
+Error          : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Pending checked  : 6
+Backfilled total : 0
+[idle] Sleeping 12 minute(s) before next cycle.
+[idle] Cycle 15 started at 2026-03-24T00:21:55
+▶ Smart attempt: niche_launch_1
+ℹ️ Initializing Twitter...
+⚠️ X session not ready for posting: login-required
+MPV2_POST_STATUS:failed:login-required
+❌ Twitter post verification failed: failed:login-required
+MPV2_SMART_STATUS:niche_launch_1:skipped
+Smart attempts: 1 | posted: 0
+========================================================================
+Account : niche_launch_1
+Checked : 3
+Verified: 0
+Error   : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Verified posts   : 0
+========================================================================
+Account : niche_launch_1
+Pending Checked : 6
+Backfilled OK   : 0
+Error          : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Pending checked  : 6
+Backfilled total : 0
+[idle] Sleeping 9 minute(s) before next cycle.
+[idle] Cycle 16 started at 2026-03-24T00:31:47
+▶ Smart attempt: niche_launch_1
+ℹ️ Initializing Twitter...
+⚠️ X session not ready for posting: login-required
+MPV2_POST_STATUS:failed:login-required
+❌ Twitter post verification failed: failed:login-required
+MPV2_SMART_STATUS:niche_launch_1:skipped
+Smart attempts: 1 | posted: 0
+========================================================================
+Account : niche_launch_1
+Checked : 3
+Verified: 0
+Error   : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Verified posts   : 0
+========================================================================
+Account : niche_launch_1
+Pending Checked : 6
+Backfilled OK   : 0
+Error          : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Pending checked  : 6
+Backfilled total : 0
+========================================================================
+Account : niche_launch_1
+Handle  : @NicheNewton
+Ready   : NO
+Reason  : login-required
+URL     : https://x.com/i/flow/login?redirect_after_login=%2Fhome
+Traceback (most recent call last):
+  File "/Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/scripts/check_x_session.py", line 109, in <module>
+    main()
+  File "/Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/scripts/check_x_session.py", line 86, in main
+    status = _check_account(account)
+             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/scripts/check_x_session.py", line 51, in _check_account
+    twitter = Twitter(
+              ^^^^^^^^
+  File "/Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/src/classes/Twitter.py", line 77, in __init__
+    raise ValueError(
+ValueError: Firefox profile path does not exist or is not a directory: /Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/secrets/twitter_automation_profile_v2
+[idle] Sleeping 11 minute(s) before next cycle.
+[idle] Cycle 17 started at 2026-03-24T00:44:03
+▶ Smart attempt: niche_launch_1
+ℹ️ Initializing Twitter...
+⚠️ X session not ready for posting: login-required
+MPV2_POST_STATUS:failed:login-required
+❌ Twitter post verification failed: failed:login-required
+MPV2_SMART_STATUS:niche_launch_1:skipped
+Smart attempts: 1 | posted: 0
+========================================================================
+Account : niche_launch_1
+Checked : 3
+Verified: 0
+Error   : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Verified posts   : 0
+========================================================================
+Account : niche_launch_1
+Pending Checked : 6
+Backfilled OK   : 0
+Error          : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Pending checked  : 6
+Backfilled total : 0
+[idle] Sleeping 15 minute(s) before next cycle.
+[idle] Cycle 18 started at 2026-03-24T01:00:14
+▶ Smart attempt: niche_launch_1
+⏭️  Skip niche_launch_1: cron-timeout:300s
+MPV2_SMART_STATUS:niche_launch_1:skipped
+Smart attempts: 1 | posted: 0
+
+[idle] timeout after 420s
+
+[idle] timeout after 420s
+
+============================================================
+Firefox Profile Lock Cleanup Utility
+============================================================
+
+
+📁 niche_launch_1
+   Profile: /Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/secrets/twitter_automation_profile_v3
+ℹ️  Skipped (active): .parentlock
+
+📁 EyeCatcher
+   Profile: /Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/secrets/twitter_automation_profile_v2
+⚠️  Profile directory not found
+
+============================================================
+Summary: Cleaned 0 | Skipped 2
+============================================================
+
+[idle] Sleeping 22 minute(s) before next cycle.
+[idle] Cycle 19 started at 2026-03-24T01:41:24
+▶ Smart attempt: niche_launch_1
+⏭️  Skip niche_launch_1: cron-timeout:300s
+MPV2_SMART_STATUS:niche_launch_1:skipped
+Smart attempts: 1 | posted: 0
+
+[idle] timeout after 420s
+
+[idle] timeout after 420s
+[idle] Sleeping 10 minute(s) before next cycle.
+[idle] Cycle 20 started at 2026-03-24T02:10:29
+▶ Smart attempt: niche_launch_1
+⏭️  Skip niche_launch_1: cron-timeout:300s
+MPV2_SMART_STATUS:niche_launch_1:skipped
+Smart attempts: 1 | posted: 0
+
+[idle] timeout after 420s
+
+[idle] timeout after 420s
+
+[idle] timeout after 420s
+[idle] Sleeping 22 minute(s) before next cycle.
+[idle] Cycle 21 started at 2026-03-24T02:58:39
+▶ Smart attempt: niche_launch_1
+⏭️  Skip niche_launch_1: cron-timeout:300s
+MPV2_SMART_STATUS:niche_launch_1:skipped
+Smart attempts: 1 | posted: 0
+
+[idle] timeout after 420s
+
+[idle] timeout after 420s
+[idle] Sleeping 13 minute(s) before next cycle.
+[idle] Cycle 22 started at 2026-03-24T03:30:46
+▶ Smart attempt: niche_launch_1
+⏭️  Skip niche_launch_1: cron-timeout:300s
+MPV2_SMART_STATUS:niche_launch_1:skipped
+Smart attempts: 1 | posted: 0
+
+[idle] timeout after 420s
+
+[idle] timeout after 420s
+[idle] Sleeping 10 minute(s) before next cycle.
+[idle] Cycle 23 started at 2026-03-24T03:59:50
+▶ Smart attempt: niche_launch_1
+⏭️  Skip niche_launch_1: cron-timeout:300s
+MPV2_SMART_STATUS:niche_launch_1:skipped
+Smart attempts: 1 | posted: 0
+
+[idle] timeout after 420s
+
+[idle] timeout after 420s
+[idle] Sleeping 19 minute(s) before next cycle.
+[idle] Cycle 24 started at 2026-03-24T04:38:00
+▶ Smart attempt: niche_launch_1
+⏭️  Skip niche_launch_1: cron-timeout:300s
+MPV2_SMART_STATUS:niche_launch_1:skipped
+Smart attempts: 1 | posted: 0
+
+[idle] timeout after 420s
+
+[idle] timeout after 420s
+
+============================================================
+Firefox Profile Lock Cleanup Utility
+============================================================
+
+
+📁 niche_launch_1
+   Profile: /Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/secrets/twitter_automation_profile_v3
+ℹ️  Skipped (active): .parentlock
+
+📁 EyeCatcher
+   Profile: /Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/secrets/twitter_automation_profile_v2
+⚠️  Profile directory not found
+
+============================================================
+Summary: Cleaned 0 | Skipped 2
+============================================================
+
+
+[idle] timeout after 420s
+[idle] Sleeping 13 minute(s) before next cycle.
+[idle] Cycle 25 started at 2026-03-24T05:17:07
+▶ Smart attempt: niche_launch_1
+⏭️  Skip niche_launch_1: cron-timeout:300s
+MPV2_SMART_STATUS:niche_launch_1:skipped
+Smart attempts: 1 | posted: 0
+
+[idle] timeout after 420s
+
+[idle] timeout after 420s
+[idle] Sleeping 19 minute(s) before next cycle.
+[idle] Cycle 26 started at 2026-03-24T05:55:16
+▶ Smart attempt: niche_launch_1
+ℹ️ Initializing Twitter...
+⚠️ X session not ready for posting: login-required
+MPV2_POST_STATUS:failed:login-required
+❌ Twitter post verification failed: failed:login-required
+MPV2_SMART_STATUS:niche_launch_1:skipped
+Smart attempts: 1 | posted: 0
+========================================================================
+Account : niche_launch_1
+Checked : 3
+Verified: 0
+Error   : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Verified posts   : 0
+========================================================================
+Account : niche_launch_1
+Pending Checked : 6
+Backfilled OK   : 0
+Error          : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Pending checked  : 6
+Backfilled total : 0
+[idle] Sleeping 17 minute(s) before next cycle.
+[idle] Cycle 27 started at 2026-03-24T06:14:54
+▶ Smart attempt: niche_launch_1
+ℹ️ Initializing Twitter...
+⚠️ X session not ready for posting: login-required
+MPV2_POST_STATUS:failed:login-required
+❌ Twitter post verification failed: failed:login-required
+MPV2_SMART_STATUS:niche_launch_1:skipped
+Smart attempts: 1 | posted: 0
+========================================================================
+Account : niche_launch_1
+Checked : 3
+Verified: 0
+Error   : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Verified posts   : 0
+========================================================================
+Account : niche_launch_1
+Pending Checked : 6
+Backfilled OK   : 0
+Error          : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Pending checked  : 6
+Backfilled total : 0
+[idle] Sleeping 15 minute(s) before next cycle.
+[idle] Cycle 28 started at 2026-03-24T06:30:43
+▶ Smart attempt: niche_launch_1
+⏭️  Skip niche_launch_1: cron-timeout:300s
+MPV2_SMART_STATUS:niche_launch_1:skipped
+Smart attempts: 1 | posted: 0
+========================================================================
+Account : niche_launch_1
+Checked : 3
+Verified: 0
+Error   : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Verified posts   : 0
+========================================================================
+Account : niche_launch_1
+Pending Checked : 6
+Backfilled OK   : 0
+Error          : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Pending checked  : 6
+Backfilled total : 0
+========================================================================
+Account : niche_launch_1
+Handle  : @NicheNewton
+Ready   : NO
+Reason  : login-required
+URL     : https://x.com/i/flow/login?redirect_after_login=%2Fhome
+Traceback (most recent call last):
+  File "/Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/scripts/check_x_session.py", line 109, in <module>
+    main()
+  File "/Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/scripts/check_x_session.py", line 86, in main
+    status = _check_account(account)
+             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/scripts/check_x_session.py", line 51, in _check_account
+    twitter = Twitter(
+              ^^^^^^^^
+  File "/Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/src/classes/Twitter.py", line 77, in __init__
+    raise ValueError(
+ValueError: Firefox profile path does not exist or is not a directory: /Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/secrets/twitter_automation_profile_v2
+[idle] Sleeping 15 minute(s) before next cycle.
+[idle] Cycle 29 started at 2026-03-24T06:51:40
+▶ Smart attempt: niche_launch_1
+ℹ️ Initializing Twitter...
+⚠️ X session not ready for posting: login-required
+MPV2_POST_STATUS:failed:login-required
+❌ Twitter post verification failed: failed:login-required
+MPV2_SMART_STATUS:niche_launch_1:skipped
+Smart attempts: 1 | posted: 0
+========================================================================
+Account : niche_launch_1
+Checked : 3
+Verified: 0
+Error   : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Verified posts   : 0
+========================================================================
+Account : niche_launch_1
+Pending Checked : 6
+Backfilled OK   : 0
+Error          : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Pending checked  : 6
+Backfilled total : 0
+[idle] Sleeping 10 minute(s) before next cycle.
+[idle] Cycle 30 started at 2026-03-24T07:02:30
+▶ Smart attempt: niche_launch_1
+ℹ️ Initializing Twitter...
+⚠️ X session not ready for posting: login-required
+MPV2_POST_STATUS:failed:login-required
+❌ Twitter post verification failed: failed:login-required
+MPV2_SMART_STATUS:niche_launch_1:skipped
+Smart attempts: 1 | posted: 0
+========================================================================
+Account : niche_launch_1
+Checked : 3
+Verified: 0
+Error   : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Verified posts   : 0
+========================================================================
+Account : niche_launch_1
+Pending Checked : 6
+Backfilled OK   : 0
+Error          : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Pending checked  : 6
+Backfilled total : 0
+
+============================================================
+Firefox Profile Lock Cleanup Utility
+============================================================
+
+
+📁 niche_launch_1
+   Profile: /Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/secrets/twitter_automation_profile_v3
+ℹ️  Skipped (active): .parentlock
+
+📁 EyeCatcher
+   Profile: /Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/secrets/twitter_automation_profile_v2
+⚠️  Profile directory not found
+
+============================================================
+Summary: Cleaned 0 | Skipped 2
+============================================================
+
+[idle] Sleeping 19 minute(s) before next cycle.
+[idle] Cycle 31 started at 2026-03-24T07:22:25
+▶ Smart attempt: niche_launch_1
+ℹ️ Initializing Twitter...
+⚠️ X session not ready for posting: login-required
+MPV2_POST_STATUS:failed:login-required
+❌ Twitter post verification failed: failed:login-required
+MPV2_SMART_STATUS:niche_launch_1:skipped
+Smart attempts: 1 | posted: 0
+========================================================================
+Account : niche_launch_1
+Checked : 3
+Verified: 0
+Error   : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Verified posts   : 0
+========================================================================
+Account : niche_launch_1
+Pending Checked : 6
+Backfilled OK   : 0
+Error          : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Pending checked  : 6
+Backfilled total : 0
+[idle] Sleeping 18 minute(s) before next cycle.
+[idle] Cycle 32 started at 2026-03-24T07:41:55
+▶ Smart attempt: niche_launch_1
+ℹ️ Initializing Twitter...
+❌ Twitter post failed: HTTPConnectionPool(host='localhost', port=56293): Read timed out. (read timeout=120)
+MPV2_SMART_STATUS:niche_launch_1:failed
+Smart attempts: 1 | posted: 0
+========================================================================
+Account : niche_launch_1
+Checked : 3
+Verified: 0
+Error   : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Verified posts   : 0
+========================================================================
+Account : niche_launch_1
+Pending Checked : 6
+Backfilled OK   : 0
+Error          : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Pending checked  : 6
+Backfilled total : 0
+Traceback (most recent call last):
+  File "/Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/scripts/check_x_session.py", line 109, in <module>
+    main()
+  File "/Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/scripts/check_x_session.py", line 86, in main
+    status = _check_account(account)
+             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/scripts/check_x_session.py", line 58, in _check_account
+    status = twitter.check_session()
+             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/src/classes/Twitter.py", line 686, in check_session
+    self.browser.get(compose_url)
+  File "/Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/venv/lib/python3.12/site-packages/selenium/webdriver/remote/webdriver.py", line 466, in get
+    self.execute(Command.GET, {"url": url})
+  File "/Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/venv/lib/python3.12/site-packages/selenium/webdriver/remote/webdriver.py", line 446, in execute
+    self.error_handler.check_response(response)
+  File "/Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/venv/lib/python3.12/site-packages/selenium/webdriver/remote/errorhandler.py", line 232, in check_response
+    raise exception_class(message, screen, stacktrace)
+selenium.common.exceptions.WebDriverException: Message: Reached error page: about:neterror?e=dnsNotFound&u=https%3A//x.com/home&c=UTF-8&d=We%20can%E2%80%99t%20connect%20to%20the%20server%20at%20x.com.&a=
+Stacktrace:
+RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8
+WebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5
+UnknownError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:961:5
+checkReadyState@chrome://remote/content/marionette/navigate.sys.mjs:59:24
+onNavigation@chrome://remote/content/marionette/navigate.sys.mjs:351:39
+emit@resource://gre/modules/EventEmitter.sys.mjs:156:19
+receiveMessage@chrome://remote/content/marionette/actors/MarionetteEventsParent.sys.mjs:33:25
+
+[idle] Sleeping 11 minute(s) before next cycle.
+[idle] Cycle 33 started at 2026-03-24T08:00:58
+▶ Smart attempt: niche_launch_1
+ℹ️ Initializing Twitter...
+❌ Twitter post failed: Message: Reached error page: about:neterror?e=dnsNotFound&u=https%3A//x.com/home&c=UTF-8&d=We%20can%E2%80%99t%20connect%20to%20the%20server%20at%20x.com.&a=
+Stacktrace:
+RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8
+WebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5
+UnknownError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:961:5
+checkReadyState@chrome://remote/content/marionette/navigate.sys.mjs:59:24
+onNavigation@chrome://remote/content/marionette/navigate.sys.mjs:351:39
+emit@resource://gre/modules/EventEmitter.sys.mjs:156:19
+receiveMessage@chrome://remote/content/marionette/actors/MarionetteEventsParent.sys.mjs:33:25
+
+MPV2_SMART_STATUS:niche_launch_1:failed
+Smart attempts: 1 | posted: 0
+========================================================================
+Account : niche_launch_1
+Checked : 3
+Verified: 0
+Error   : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Verified posts   : 0
+========================================================================
+Account : niche_launch_1
+Pending Checked : 6
+Backfilled OK   : 0
+Error          : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Pending checked  : 6
+Backfilled total : 0
+[idle] Sleeping 12 minute(s) before next cycle.
+[idle] Cycle 34 started at 2026-03-24T08:16:49
+▶ Smart attempt: niche_launch_1
+ℹ️ Initializing Twitter...
+❌ Twitter post failed: Message: Reached error page: about:neterror?e=dnsNotFound&u=https%3A//x.com/home&c=UTF-8&d=We%20can%E2%80%99t%20connect%20to%20the%20server%20at%20x.com.&a=
+Stacktrace:
+RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8
+WebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5
+UnknownError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:961:5
+checkReadyState@chrome://remote/content/marionette/navigate.sys.mjs:59:24
+onNavigation@chrome://remote/content/marionette/navigate.sys.mjs:351:39
+emit@resource://gre/modules/EventEmitter.sys.mjs:156:19
+receiveMessage@chrome://remote/content/marionette/actors/MarionetteEventsParent.sys.mjs:33:25
+
+MPV2_SMART_STATUS:niche_launch_1:failed
+Smart attempts: 1 | posted: 0
+========================================================================
+Account : niche_launch_1
+Checked : 3
+Verified: 0
+Error   : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Verified posts   : 0
+========================================================================
+Account : niche_launch_1
+Pending Checked : 6
+Backfilled OK   : 0
+Error          : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Pending checked  : 6
+Backfilled total : 0
+[idle] Sleeping 20 minute(s) before next cycle.
+[idle] Cycle 35 started at 2026-03-24T08:46:11
+▶ Smart attempt: niche_launch_1
+Traceback (most recent call last):
+  File "/Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/src/cron.py", line 7, in <module>
+    from classes.Tts import TTS
+  File "/Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/src/classes/Tts.py", line 3, in <module>
+    from kittentts import KittenTTS as KittenModel
+  File "/Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/venv/lib/python3.12/site-packages/kittentts/__init__.py", line 1, in <module>
+    from kittentts.get_model import get_model, KittenTTS
+  File "/Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/venv/lib/python3.12/site-packages/kittentts/get_model.py", line 4, in <module>
+    from .onnx_model import KittenTTS_1_Onnx
+  File "/Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/venv/lib/python3.12/site-packages/kittentts/onnx_model.py", line 1, in <module>
+    from misaki import en, espeak
+  File "/Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/venv/lib/python3.12/site-packages/misaki/en.py", line 4, in <module>
+    from num2words import num2words
+  File "/Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/venv/lib/python3.12/site-packages/num2words/__init__.py", line 20, in <module>
+    from . import (lang_AM, lang_AR, lang_AZ, lang_BE, lang_BN, lang_CA, lang_CE,
+  File "/Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/venv/lib/python3.12/site-packages/num2words/lang_AM.py", line 20, in <module>
+    from . import lang_EU
+  File "/Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/venv/lib/python3.12/site-packages/num2words/lang_EU.py", line 20, in <module>
+    from .base import Num2Word_Base
+  File "/Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/venv/lib/python3.12/site-packages/num2words/base.py", line 25, in <module>
+    from .currency import parse_currency_parts, prefix_currency
+ModuleNotFoundError: No module named 'num2words.currency'
+MPV2_SMART_STATUS:niche_launch_1:failed
+Smart attempts: 1 | posted: 0
+========================================================================
+Account : niche_launch_1
+Checked : 3
+Verified: 0
+Error   : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Verified posts   : 0
+========================================================================
+Account : niche_launch_1
+Pending Checked : 6
+Backfilled OK   : 0
+Error          : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Pending checked  : 6
+Backfilled total : 0
+[idle] Sleeping 14 minute(s) before next cycle.
+[idle] Cycle 36 started at 2026-03-24T09:08:12
+[idle] Received signal 15; shutting down cleanly.
+========================================================================
+Account : niche_launch_1
+Checked : 3
+Verified: 0
+Error   : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Verified posts   : 0
+========================================================================
+Account : niche_launch_1
+Pending Checked : 6
+Backfilled OK   : 0
+Error          : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Pending checked  : 6
+Backfilled total : 0
+
+============================================================
+Firefox Profile Lock Cleanup Utility
+============================================================
+
+
+📁 niche_launch_1
+   Profile: /Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/secrets/twitter_automation_profile_v3
+ℹ️  Skipped (active): .parentlock
+
+📁 EyeCatcher
+   Profile: /Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/secrets/twitter_automation_profile
+ℹ️  Skipped (active): .parentlock
+
+============================================================
+Summary: Cleaned 0 | Skipped 2
+============================================================
+
+[idle] Received signal 15; shutting down cleanly.

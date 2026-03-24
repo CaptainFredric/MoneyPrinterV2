@@ -68,6 +68,32 @@ def _is_profile_already_open(profile_path: str) -> bool:
     return False
 
 
+def _is_firefox_process_running() -> bool:
+    try:
+        result = subprocess.run(
+            ["pgrep", "-af", "Firefox.app/Contents/MacOS/firefox|/firefox"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        return bool((result.stdout or "").strip())
+    except Exception:
+        return False
+
+
+def _clear_profile_locks(profile_path: str) -> int:
+    removed = 0
+    for lock_name in [".parentlock", "parent.lock", "lock"]:
+        lock_path = os.path.join(profile_path, lock_name)
+        if os.path.exists(lock_path):
+            try:
+                os.remove(lock_path)
+                removed += 1
+            except OSError:
+                pass
+    return removed
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Open an account Firefox profile for native X login repair")
     parser.add_argument("identifier", help="nickname or uuid")
@@ -94,16 +120,20 @@ def main() -> None:
         sys.exit(1)
 
     if _is_profile_already_open(profile_path):
-        print("=" * 72)
-        print(f"Account : {account.get('nickname', '?')}")
-        if account.get("x_username"):
-            print(f"Handle  : {account['x_username']}")
-        print(f"Profile : {profile_path}")
-        print("Opened  : already running")
-        print("")
-        print("This profile already has an open Firefox window.")
-        print("Reusing existing window to avoid duplicate profile instances.")
-        return
+        if _is_firefox_process_running():
+            print("=" * 72)
+            print(f"Account : {account.get('nickname', '?')}")
+            if account.get("x_username"):
+                print(f"Handle  : {account['x_username']}")
+            print(f"Profile : {profile_path}")
+            print("Opened  : already running")
+            print("")
+            print("This profile already has an open Firefox window.")
+            print("Reusing existing window to avoid duplicate profile instances.")
+            return
+        removed_locks = _clear_profile_locks(profile_path)
+        if removed_locks > 0:
+            print(f"Cleared {removed_locks} stale profile lock file(s).")
 
     command = [
         firefox_binary,

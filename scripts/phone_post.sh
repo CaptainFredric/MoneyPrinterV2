@@ -15,8 +15,11 @@
 #   phone_post.sh performance  → show linear growth phase + next objective
 #   phone_post.sh next         → run linear next-step sequence (performance + autotune preview + status)
 #   phone_post.sh login <id>   → open the exact Firefox profile for X login repair
+#   phone_post.sh login-all     → open all configured Firefox profiles for X login repair
+#   phone_post.sh login-prep    → stop automation + geckodriver, then open all login profiles
 #   phone_post.sh session <id> → check whether the X session/profile is ready to post
 #   phone_post.sh session-all  → check X session readiness for all accounts
+#   phone_post.sh session-watch <id|all> [seconds] → passive watch mode for login progress
 #   phone_post.sh verify <id>  → verify recent cached posts against live X timeline
 #   phone_post.sh verify-all   → verify recent cached posts for all accounts
 #   phone_post.sh autotune      → preview ratio tuning changes (dry-run)
@@ -63,6 +66,39 @@ IDLE_PID_FILE="$RUNTIME_DIR/money_idle.pid"
 IDLE_STATE_FILE="$RUNTIME_DIR/money_idle_state.json"
 IDLE_STOP_FILE="$RUNTIME_DIR/money_idle.stop"
 IDLE_LOG_FILE="$ROOT_DIR/logs/idle_mode.log"
+
+stop_automation_processes() {
+    mkdir -p "$RUNTIME_DIR"
+
+    touch "$RUNTIME_DIR/money_idle.stop" "$RUNTIME_DIR/money_idle_phase2.stop" 2>/dev/null || true
+
+    if [[ -f "$RUNTIME_DIR/money_idle.pid" ]]; then
+        kill "$(cat "$RUNTIME_DIR/money_idle.pid" 2>/dev/null || true)" >/dev/null 2>&1 || true
+    fi
+
+    if [[ -f "$RUNTIME_DIR/money_idle_phase2.pid" ]]; then
+        kill "$(cat "$RUNTIME_DIR/money_idle_phase2.pid" 2>/dev/null || true)" >/dev/null 2>&1 || true
+    fi
+
+    pkill -f 'money_idle_phase2.py|money_idle_mode.py|smart_post_twitter.py|run_once.py twitter|geckodriver|marionette|selenium' >/dev/null 2>&1 || true
+}
+
+list_account_nicknames() {
+    "$VENV_PYTHON" - <<'PY'
+import json
+from pathlib import Path
+
+cache = Path('.mp/twitter.json')
+if not cache.exists():
+    raise SystemExit(0)
+
+data = json.loads(cache.read_text(encoding='utf-8'))
+for account in data.get('accounts', []):
+    nickname = str(account.get('nickname', '')).strip()
+    if nickname:
+        print(nickname)
+PY
+}
 
 idle_is_running() {
     if [[ ! -f "$IDLE_PID_FILE" ]]; then
@@ -113,13 +149,50 @@ case "$MODE" in
         "$VENV_PYTHON" scripts/performance_report.py
         ;;
     login)
+        stop_automation_processes
         "$VENV_PYTHON" scripts/open_x_login.py "$TARGET"
         ;;
+    login-all)
+        stop_automation_processes
+        found_any=0
+        while IFS= read -r nickname; do
+            [[ -n "$nickname" ]] || continue
+            found_any=1
+            "$VENV_PYTHON" scripts/open_x_login.py "$nickname"
+            echo ""
+        done < <(list_account_nicknames)
+        if [[ "$found_any" -eq 0 ]]; then
+            echo "No accounts found in .mp/twitter.json"
+            exit 1
+        fi
+        ;;
+    login-prep)
+        echo "🧹 Stopping automation + geckodriver for clean manual login..."
+        stop_automation_processes
+        echo "✅ Automation processes stopped."
+        echo ""
+        found_any=0
+        while IFS= read -r nickname; do
+            [[ -n "$nickname" ]] || continue
+            found_any=1
+            "$VENV_PYTHON" scripts/open_x_login.py "$nickname"
+            echo ""
+        done < <(list_account_nicknames)
+        if [[ "$found_any" -eq 0 ]]; then
+            echo "No accounts found in .mp/twitter.json"
+            exit 1
+        fi
+        ;;
     session)
-        "$VENV_PYTHON" scripts/check_x_session.py "$TARGET"
+        "$VENV_PYTHON" scripts/check_x_session.py "$TARGET" --no-fail
         ;;
     session-all)
-        "$VENV_PYTHON" scripts/check_x_session.py all
+        "$VENV_PYTHON" scripts/check_x_session.py all --no-fail
+        ;;
+    session-watch)
+        watch_target="${TARGET:-all}"
+        watch_seconds="${3:-10}"
+        "$VENV_PYTHON" scripts/check_x_session.py "$watch_target" --watch "$watch_seconds" --no-fail
         ;;
     verify)
         "$VENV_PYTHON" scripts/verify_twitter_posts.py "$TARGET"

@@ -1,13 +1,174 @@
 
-[idle-p2] ========== Cycle 1 started at 2026-03-23T22:30:27 ==========
-[idle-p2] Selected account: EyeCatcher (active:health=92)
-▶ Smart attempt: EyeCatcher
-⏭️  Skip EyeCatcher: firefox-profile-not-found
+[idle-p2] ========== Cycle 1 started at 2026-03-24T10:20:08 ==========
+[idle-p2] Selected account: niche_launch_1 (active:health=70)
+▶ Smart attempt: niche_launch_1
+ℹ️ Initializing Twitter...
+ℹ️ Selected post mode: text
+ℹ️ Generating a post...
+ℹ️ Tweet length: 125 chars
+ => Posting to Twitter: What's the #PomodoroPremium cost? Is it worth sacr...
+ => Pressed [ENTER] Button on Twitter..
+⚠️ X accepted compose, but permalink lookup is delayed/unavailable. Saving as pending verification for later backfill.
+MPV2_POST_STATUS:posted:pending-verification:confidence=39:level=low
+✅ Done posting.
+⏭️  Skip niche_launch_1: low-confidence:score=39:level=low
+MPV2_SMART_STATUS:niche_launch_1:skipped
 Smart attempts: 1 | posted: 0
-[idle-p2] Account EyeCatcher transitioned to: active
-[idle-p2] Account health score: 92
+[idle-p2] Account niche_launch_1 transitioned to: cooldown
+[idle-p2] Account health score: 62
 [idle-p2] Skipping verify/backfill this cycle (no qualified post, non-maintenance cycle).
 [idle-p2] Account states summary:
-niche_launch_1       | ACTIVE     | health= 70 | last=failed:login-required
-EyeCatcher           | ACTIVE     | health= 92 | last=
-[idle-p2] Sleeping 12 minute(s) before next cycle.
+niche_launch_1       | COOLDOWN   | health= 62 | last=posted:pending-verification:confidence=39:level=lo
+EyeCatcher           | DEGRADED   | health= 62 | last=failed:login-required
+[idle-p2] Sleeping 19 minute(s) before next cycle.
+
+[idle-p2] ========== Cycle 2 started at 2026-03-24T10:42:59 ==========
+[idle-p2] No eligible accounts available. All in cooldown/blocked/paused state.
+niche_launch_1       | COOLDOWN   | health= 62 | last=posted:pending-verification:confidence=39:level=lo
+EyeCatcher           | DEGRADED   | health= 62 | last=failed:login-required
+[idle-p2] Sleeping 5 minutes before retry.
+
+[idle-p2] ========== Cycle 3 started at 2026-03-24T11:19:01 ==========
+[idle-p2] Selected account: niche_launch_1 (active:health=62)
+▶ Smart attempt: niche_launch_1
+ℹ️ Initializing Twitter...
+ℹ️ Selected post mode: text
+ℹ️ Generating a post...
+ℹ️ Tweet length: 170 chars
+ => Posting to Twitter: Your morning routine sets the tone for the day. Cr...
+ => Pressed [ENTER] Button on Twitter..
+⚠️ X accepted compose, but permalink lookup is delayed/unavailable. Saving as pending verification for later backfill.
+MPV2_POST_STATUS:posted:pending-verification:confidence=39:level=low
+✅ Done posting.
+⏭️  Skip niche_launch_1: low-confidence:score=39:level=low
+MPV2_SMART_STATUS:niche_launch_1:skipped
+Smart attempts: 1 | posted: 0
+[idle-p2] Account niche_launch_1 transitioned to: cooldown
+[idle-p2] Account health score: 54
+
+🔍 Phase 3 Enhanced Verification (Limit: 5 posts/account)
+
+================================================================================
+Account : niche_launch_1
+Handle  : @NicheNewton
+Checked : 5
+Verified: 0
+Methods : (5)
+  ✗ 03/24/2026, 11:21:04 | Your morning routine sets the tone for the day. Craft a 5-minute 'pre-
+  ✗ 03/24/2026, 10:20:35 | What's the #PomodoroPremium cost? Is it worth sacrificing 2-5 minutes 
+  ✗ 03/24/2026, 10:17:49 | What if your stop doing list became your must do list, freeing up ment
+  ✗ 03/23/2026, 18:15:39 | Did you know your most productive work hours are often just an hour aw
+  ✗ 03/23/2026, 18:11:07 | Why are you still checking email every hour? Implement the '2-hour rul
+================================================================================
+Accounts checked : 1
+Total verified   : 0
+Phase 3 Status   : Enhanced matching active ✓
+
+========================================================================
+Account : niche_launch_1
+Handle  : @NicheNewton
+Pending Checked : 9
+Backfilled OK   : 0
+- MISS 03/24/2026, 11:21:04 | Your morning routine sets the tone for the day. Craft a 5-minute 'pre-
+- MISS 03/24/2026, 10:20:35 | What's the #PomodoroPremium cost? Is it worth sacrificing 2-5 minutes 
+- MISS 03/24/2026, 10:17:49 | What if your stop doing list became your must do list, freeing up ment
+- MISS 03/23/2026, 18:15:39 | Did you know your most productive work hours are often just an hour aw
+- MISS 03/23/2026, 18:11:07 | Why are you still checking email every hour? Implement the '2-hour rul
+- MISS 03/23/2026, 16:57:27 | Did you know that a 'Stop Doing' list can be just as powerful as a to-
+- MISS 03/23/2026, 16:23:39 | Want to reduce meetings by 50%? Try the '2-minute rule': if a meeting 
+- MISS 03/23/2026, 15:24:58 | What's holding you back from automating repetitive tasks? Explore Zapi
+- MISS 03/22/2026, 13:01:48 | Boost your focus with the Pomodoro Technique! Work...
+========================================================================
+Accounts checked : 1
+Pending checked  : 9
+Backfilled total : 0
+[idle-p2] Account states summary:
+niche_launch_1       | COOLDOWN   | health= 54 | last=posted:pending-verification:confidence=39:level=lo
+EyeCatcher           | DEGRADED   | health= 62 | last=failed:login-required
+[idle-p2] Sleeping 17 minute(s) before next cycle.
+
+[idle-p2] ========== Cycle 4 started at 2026-03-24T11:44:16 ==========
+[idle-p2] No eligible accounts available. All in cooldown/blocked/paused state.
+niche_launch_1       | COOLDOWN   | health= 54 | last=posted:pending-verification:confidence=39:level=lo
+EyeCatcher           | DEGRADED   | health= 62 | last=failed:login-required
+[idle-p2] Sleeping 5 minutes before retry.
+
+[idle-p2] ========== Cycle 5 started at 2026-03-24T11:49:18 ==========
+[idle-p2] Selected account: niche_launch_1 (active:health=54)
+▶ Smart attempt: niche_launch_1
+⏭️  Skip niche_launch_1: cron-timeout:300s
+MPV2_SMART_STATUS:niche_launch_1:skipped
+Smart attempts: 1 | posted: 0
+[idle-p2] Account niche_launch_1 transitioned to: active
+[idle-p2] Account health score: 54
+[idle-p2] Skipping verify/backfill this cycle (no qualified post, non-maintenance cycle).
+[idle-p2] Account states summary:
+niche_launch_1       | ACTIVE     | health= 54 | last=
+EyeCatcher           | DEGRADED   | health= 62 | last=failed:login-required
+[idle-p2] Sleeping 17 minute(s) before next cycle.
+
+[idle-p2] ========== Cycle 6 started at 2026-03-24T12:11:22 ==========
+[idle-p2] Selected account: niche_launch_1 (active:health=54)
+▶ Smart attempt: niche_launch_1
+⏭️  Skip niche_launch_1: cron-timeout:300s
+MPV2_SMART_STATUS:niche_launch_1:skipped
+Smart attempts: 1 | posted: 0
+[idle-p2] Account niche_launch_1 transitioned to: active
+[idle-p2] Account health score: 54
+
+🔍 Phase 3 Enhanced Verification (Limit: 5 posts/account)
+
+================================================================================
+Account : niche_launch_1
+Handle  : @NicheNewton
+Checked : 5
+Verified: 1
+Methods : permalink-url(1), (4)
+  ✓ 03/24/2026, 11:24:41 | Boost your morning productivity with the '5-Sense Start': Set, Schedul
+      URL: https://x.com/NicheNewton/status/2036479350132842623
+      Match: permalink-url
+  ✗ 03/24/2026, 11:21:04 | Your morning routine sets the tone for the day. Craft a 5-minute 'pre-
+  ✗ 03/24/2026, 10:20:35 | What's the #PomodoroPremium cost? Is it worth sacrificing 2-5 minutes 
+  ✗ 03/24/2026, 10:17:49 | What if your stop doing list became your must do list, freeing up ment
+  ✗ 03/23/2026, 18:15:39 | Did you know your most productive work hours are often just an hour aw
+================================================================================
+Accounts checked : 1
+Total verified   : 1
+Phase 3 Status   : Enhanced matching active ✓
+
+Traceback (most recent call last):
+  File "/Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/scripts/backfill_pending_twitter.py", line 26, in <module>
+    from classes.Twitter import Twitter  # noqa: E402
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/src/classes/Twitter.py", line 13, in <module>
+    import requests
+  File "/Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/venv/lib/python3.12/site-packages/requests/__init__.py", line 43, in <module>
+    import urllib3
+  File "/Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/venv/lib/python3.12/site-packages/urllib3/__init__.py", line 15, in <module>
+  File "/Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/venv/lib/python3.12/site-packages/urllib3/_base_connection.py", line 5, in <module>
+    from .util.connection import _TYPE_SOCKET_OPTIONS
+  File "/Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/venv/lib/python3.12/site-packages/urllib3/util/__init__.py", line 20, in <module>
+    from .wait import wait_for_read, wait_for_write
+ImportError: cannot import name 'wait_for_read' from 'urllib3.util.wait' (/Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/venv/lib/python3.12/site-packages/urllib3/util/wait.py)
+
+============================================================
+Firefox Profile Lock Cleanup Utility
+============================================================
+
+
+📁 niche_launch_1
+   Profile: /Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/secrets/twitter_automation_profile_v3
+ℹ️  Skipped (active): .parentlock
+
+📁 EyeCatcher
+   Profile: /Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/secrets/twitter_automation_profile
+ℹ️  Skipped (active): .parentlock
+
+============================================================
+Summary: Cleaned 0 | Skipped 2
+============================================================
+
+[idle-p2] Account states summary:
+niche_launch_1       | ACTIVE     | health= 54 | last=
+EyeCatcher           | DEGRADED   | health= 62 | last=failed:login-required
+[idle-p2] Sleeping 15 minute(s) before next cycle.

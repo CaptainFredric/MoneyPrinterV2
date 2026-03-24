@@ -334,5 +334,184 @@
     "using_fallback_profile": true,
     "reason": "cooldown:24m",
     "attempt_time": "2026-03-23T18:21:18.510700"
+  },
+  {
+    "timestamp": "2026-03-24T10:21:08.935105",
+    "account_uuid": "6f4f6c1a-2b4d-4dc9-9e8e-7d0e4f5c1a21",
+    "account_nickname": "niche_launch_1",
+    "action": "post_attempt",
+    "status": "pending",
+    "using_fallback_profile": true,
+    "reason": "unverified",
+    "text_snippet": "What if your stop doing list became your must do list, freeing up mental energy ",
+    "permalink_debug": {
+      "expected_handle": "nichenewton",
+      "compose_candidates": 4,
+      "compose_matching_candidates": 0,
+      "compose_samples": [
+        "https://x.com/oriellee_/status/2036140924669997331",
+        "https://x.com/washghost1/status/2036194816300638393",
+        "https://x.com/ShitpostReels/status/2036405203465834795",
+        "https://x.com/VAsgore_/status/2036402199819874409"
+      ],
+      "profile_candidates": 4,
+      "timeline_items": 4,
+      "search_queries_tried": [
+        "https://x.com/search?q=from%3ANicheNewton+%22What+if+your+stop+doing+list+became+your+must+do%22&src=typed_query&f=live",
+        "https://x.com/search?q=from%3ANicheNewton+%22What+if+your+stop+doing+list+became+your+must+do+list%2C+freeing+up+mental+energy%22&src=typed_query&f=live"
+      ],
+      "match_method": "",
+      "pages_tried": [
+        "https://x.com/NicheNewton",
+        "https://x.com/NicheNewton/with_replies",
+        "https://x.com/search?q=from%3ANicheNewton&src=typed_query&f=live",
+        "https://x.com/NicheNewton",
+        "https://x.com/NicheNewton/with_replies",
+        "https://x.com/search?q=from%3ANicheNewton&src=typed_query&f=live",
+        "https://x.com/NicheNewton",
+        "https://x.com/NicheNewton/with_replies",
+        "https://x.com/search?q=from%3ANicheNewton&src=typed_query&f=live",
+        "https://x.com/NicheNewton",
+        "https://x.com/NicheNewton/with_replies",
+        "https://x.com/search?q=from%3ANicheNewton&src=typed_query&f=live",
+        "https://x.com/NicheNewton",
+        "https://x.com/NicheNewton/with_replies",
+        "https://x.com/search?q=from%3ANicheNewton&src=typed_query&f=live"
+      ]
+    },
+    "confidence_score": 39,
+    "confidence_level": "low",
+    "attempt_time": "2026-03-24T10:17:49.008299"
+  },
+  {
+    "timestamp": "2026-03-24T10:23:54.061431",
+    "account_uuid": "6f4f6c1a-2b4d-4dc9-9e8e-7d0e4f5c1a21",
+    "account_nickname": "niche_launch_1",
+    "action": "post_attempt",
+    "status": "pending",
+    "using_fallback_profile": true,
+    "reason": "unverified",
+    "text_snippet": "What's the #PomodoroPremium cost? Is it worth sacrificing 2-5 minutes of product",
+    "permalink_debug": {
+      "expected_handle": "nichenewton",
+      "compose_candidates": 4,
+      "compose_matching_candidates": 0,
+      "compose_samples": [
+        "https://x.com/VAsgore_/status/2036402199819874409",
+        "https://x.com/diaryofjadee/status/2036224271886795028",
+        "https://x.com/historyinmemes/status/2036353322266099775",
+        "https://x.com/shitpost_game/status/2036378739294998841"
+      ],
+      "profile_candidates": 4,
+      "timeline_items": 4,
+      "search_queries_tried": [
+        "https://x.com/search?q=from%3ANicheNewton+%22What%27s+the+%23PomodoroPremium+cost%3F+Is+it+worth+sacrificing+2-5+minutes%22&src=typed_query&f=live",
+        "https://x.com/search?q=from%3ANicheNewton+%22What%27s+the+%23PomodoroPremium+cost%3F+Is+it+worth+sacrificing+2-5+minutes+of%22&src=typed_query&f=live"
+      ],
+      "match_method": "",
+      "pages_tried": [
+        "https://x.com/NicheNewton",
+        "https://x.com/NicheNewton/with_replies",
+        "https://x.com/search?q=from%3ANicheNewton&src=typed_query&f=live",
+        "https://x.com/NicheNewton",
+        "https://x.com/NicheNewton/with_replies",
+        "https://x.com/search?q=from%3ANicheNewton&src=typed_query&f=live",
+        "https://x.com/NicheNewton",
+        "https://x.com/NicheNewton/with_replies",
+        "https://x.com/search?q=from%3ANicheNewton&src=typed_query&f=live",
+        "https://x.com/NicheNewton",
+        "https://x.com/NicheNewton/with_replies",
+        "https://x.com/search?q=from%3ANicheNewton&src=typed_query&f=live",
+        "https://x.com/NicheNewton",
+        "https://x.com/NicheNewton/with_replies",
+        "https://x.com/search?q=from%3ANicheNewton&src=typed_query&f=live"
+      ]
+    },
+    "confidence_score": 39,
+    "confidence_level": "low",
+    "attempt_time": "2026-03-24T10:20:35.868443"
+  },
+  {
+    "timestamp": "2026-03-24T10:24:51.522822",
+    "account_uuid": "6f4f6c1a-2b4d-4dc9-9e8e-7d0e4f5c1a21",
+    "account_nickname": "niche_launch_1",
+    "action": "post_attempt",
+    "status": "skipped",
+    "using_fallback_profile": true,
+    "reason": "cooldown:25m",
+    "attempt_time": "2026-03-24T10:24:51.514654"
+  },
+  {
+    "timestamp": "2026-03-24T10:30:29.682136",
+    "account_uuid": "6f4f6c1a-2b4d-4dc9-9e8e-7d0e4f5c1a21",
+    "account_nickname": "niche_launch_1",
+    "action": "post_attempt",
+    "status": "skipped",
+    "using_fallback_profile": true,
+    "reason": "cooldown:20m",
+    "attempt_time": "2026-03-24T10:30:29.652400"
+  },
+  {
+    "timestamp": "2026-03-24T11:24:20.117397",
+    "account_uuid": "6f4f6c1a-2b4d-4dc9-9e8e-7d0e4f5c1a21",
+    "account_nickname": "niche_launch_1",
+    "action": "post_attempt",
+    "status": "pending",
+    "using_fallback_profile": true,
+    "reason": "unverified",
+    "text_snippet": "Your morning routine sets the tone for the day. Craft a 5-minute 'pre-game' ritu",
+    "permalink_debug": {
+      "expected_handle": "nichenewton",
+      "compose_candidates": 5,
+      "compose_matching_candidates": 0,
+      "compose_samples": [
+        "https://x.com/_hal33m/status/2036323926733889792",
+        "https://x.com/yukiiinomnom/status/2036058204321312926",
+        "https://x.com/thedarkcuck/status/2036148740038217819",
+        "https://x.com/idrugthat/status/2035922776390045875",
+        "https://x.com/boatem_poll/status/2036421981118005495"
+      ],
+      "profile_candidates": 4,
+      "timeline_items": 4,
+      "search_queries_tried": [
+        "https://x.com/search?q=from%3ANicheNewton+%22Your+morning+routine+sets+the+tone+for+the+day.+Craft%22&src=typed_query&f=live",
+        "https://x.com/search?q=from%3ANicheNewton+%22Your+morning+routine+sets+the+tone+for+the+day.+Craft+a+5-minute+%27pre-game%27%22&src=typed_query&f=live"
+      ],
+      "match_method": "",
+      "pages_tried": [
+        "https://x.com/NicheNewton",
+        "https://x.com/NicheNewton/with_replies",
+        "https://x.com/search?q=from%3ANicheNewton&src=typed_query&f=live",
+        "https://x.com/NicheNewton",
+        "https://x.com/NicheNewton/with_replies",
+        "https://x.com/search?q=from%3ANicheNewton&src=typed_query&f=live",
+        "https://x.com/NicheNewton",
+        "https://x.com/NicheNewton/with_replies",
+        "https://x.com/search?q=from%3ANicheNewton&src=typed_query&f=live",
+        "https://x.com/NicheNewton",
+        "https://x.com/NicheNewton/with_replies",
+        "https://x.com/search?q=from%3ANicheNewton&src=typed_query&f=live",
+        "https://x.com/NicheNewton",
+        "https://x.com/NicheNewton/with_replies",
+        "https://x.com/search?q=from%3ANicheNewton&src=typed_query&f=live"
+      ]
+    },
+    "confidence_score": 39,
+    "confidence_level": "low",
+    "attempt_time": "2026-03-24T11:21:04.692680"
+  },
+  {
+    "timestamp": "2026-03-24T11:25:20.114974",
+    "account_uuid": "6f4f6c1a-2b4d-4dc9-9e8e-7d0e4f5c1a21",
+    "account_nickname": "niche_launch_1",
+    "action": "post_attempt",
+    "status": "success",
+    "using_fallback_profile": true,
+    "text_snippet": "Boost your morning productivity with the '5-Sense Start': Set, Schedule, Simplif",
+    "tweet_url": "https://x.com/NicheNewton/status/2036479350132842623",
+    "category": "time-management",
+    "confidence_score": 93,
+    "confidence_level": "high",
+    "attempt_time": "2026-03-24T11:24:41.583682"
   }
 ]

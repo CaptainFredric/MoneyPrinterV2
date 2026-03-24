@@ -194,34 +194,30 @@ class PublishVerificationHardener:
             return []
 
         queries = []
-
-        # Query 1: First 30 chars (high precision)
-        first_30 = norm[:30].strip()
-        if first_30 and len(first_30) > 10:
-            queries.append(first_30)
-
-        # Query 2: Hashtags only
-        hashtags = PublishVerificationHardener.extract_hashtags(text)
-        if hashtags and len(hashtags) > 0:
-            queries.append(' '.join(list(hashtags)[:3]))
-
-        # Query 3: First 5 significant words
         words = norm.split()
-        sig_words = [w for w in words if len(w) > 4][:5]
-        if sig_words:
-            queries.append(' '.join(sig_words))
+        significant_words = [w for w in words if len(w) >= 5]
 
-        # Query 4: Middle excerpt (if long enough)
-        if len(norm) > 100:
-            mid = len(norm) // 2
-            excerpt = norm[mid:mid + 40].strip()
-            if excerpt and len(excerpt) > 10:
-                queries.append(excerpt)
+        # Query 1: top distinctive words only
+        if significant_words:
+            queries.append(' '.join(significant_words[:3]))
 
-        # Query 5: Last meaningful phrase
-        words = norm.split()[-8:]
-        if words:
-            queries.append(' '.join(words))
+        # Query 2: hashtags plus strongest keyword
+        hashtags = sorted(PublishVerificationHardener.extract_hashtags(text))
+        if hashtags:
+            hashtag_query = ' '.join(f'#{tag}' for tag in hashtags[:2])
+            if significant_words:
+                hashtag_query = f"{hashtag_query} {significant_words[0]}".strip()
+            queries.append(hashtag_query)
+
+        # Query 3: alternate keyword cluster from later in the text
+        if len(significant_words) >= 5:
+            queries.append(' '.join(significant_words[2:5]))
+
+        # Query 4: prefix keywords without quoting
+        prefix_words = words[:6]
+        prefix_sig = [w for w in prefix_words if len(w) >= 4]
+        if prefix_sig:
+            queries.append(' '.join(prefix_sig[:4]))
 
         # Remove duplicates, limit to max_queries
         queries = list(dict.fromkeys(queries))[:max_queries]
