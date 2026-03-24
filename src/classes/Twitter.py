@@ -17,6 +17,7 @@ from cache import *
 from config import *
 from status import *
 from llm_provider import generate_text
+from publish_verification_hardener import PublishVerificationHardener
 from typing import List, Optional
 from datetime import datetime, timedelta
 from termcolor import colored
@@ -1207,45 +1208,61 @@ class Twitter:
         verified_count = 0
         for cached_post in reversed(recent_cached):
             cached_url = self._canonical_status_url(str(cached_post.get("tweet_url", "")))
-            cached_norm = self._normalize_tweet(cached_post.get("content", ""))
+            cached_content = str(cached_post.get("content", ""))
+            cached_norm = self._normalize_tweet(cached_content)
             match_url = ""
             match_method = ""
 
+            # Strategy 1: URL match (highest confidence)
             for live_post in live_posts:
                 live_url = live_post.get("tweet_url", "")
-                live_norm = live_post.get("normalized_text", "")
-
                 if cached_url and live_url and cached_url == live_url:
-                    if cached_norm and live_norm:
-                        permalink_similarity = SequenceMatcher(None, cached_norm, live_norm).ratio()
-                        if permalink_similarity >= 0.80 or cached_norm[:90] in live_norm or live_norm[:90] in cached_norm:
-                            match_url = live_url
-                            match_method = "permalink"
-                            break
-                    else:
-                        match_url = live_url
-                        match_method = "permalink"
-                        break
-
-                if not cached_norm or not live_norm:
-                    continue
-
-                similarity = SequenceMatcher(None, cached_norm, live_norm).ratio()
-                if similarity >= 0.88 or cached_norm[:90] in live_norm:
                     match_url = live_url
-                    match_method = "timeline-text"
+                    match_method = "permalink-url"
                     break
 
-            if not match_url and cached_norm:
-                recovered = self._resolve_post_permalink_via_search(
-                    handle=handle,
-                    normalized_target=cached_norm,
-                    raw_text=str(cached_post.get("content", "")),
-                    max_queries=2,
+            # Strategy 2: Enhanced text matching (using hardener)
+            if not match_url and cached_content:
+                for live_post in live_posts:
+                    live_content = live_post.get("normalized_text", "")
+                    if not live_content:
+                        continue
+
+                    # Use enhanced matching from hardener
+                    is_match = PublishVerificationHardener.is_strong_match(
+                        cached_content, live_content, url_match=False
+                    )
+                    if is_match:
+                        match_url = live_post.get("tweet_url", "")
+                        match_method = "enhanced-text"
+                        break
+
+                    # Fallback: basic similarity check
+                    if cached_norm and live_content:
+                        match_score = PublishVerificationHardener.compute_match_score(
+                            cached_norm, live_content
+                        )
+                        if match_score >= 80.0:
+                            match_url = live_post.get("tweet_url", "")
+                            match_method = "text-similarity"
+                            break
+
+            # Strategy 3: Enhanced search fallback (multi-query)
+            if not match_url and cached_content:
+                search_queries = PublishVerificationHardener.build_search_queries(
+                    cached_content, max_queries=3
                 )
-                if recovered:
-                    match_url = recovered
-                    match_method = "search-text"
+                for query in search_queries:
+                    recovered = self._resolve_post_permalink_via_search(
+                        handle=handle,
+                        normalized_target=query,
+                        raw_text=cached_content,
+                        max_queries=1,
+                    )
+                    if recovered:
+                        match_url = recovered
+                        match_method = "multi-query-search"
+                        break
 
             verified = bool(match_url)
             if verified:
