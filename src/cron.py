@@ -6,10 +6,6 @@ from pathlib import Path
 from status import *
 from cache import get_accounts
 from config import get_verbose
-from classes.Tts import TTS
-from classes.Twitter import Twitter
-from classes.YouTube import YouTube
-from llm_provider import select_model
 
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -90,6 +86,8 @@ def main():
     account_id = str(sys.argv[2])
     model = str(sys.argv[3]) if len(sys.argv) > 3 else None
 
+    from llm_provider import select_model
+
     if model:
         select_model(model)
     else:
@@ -99,6 +97,8 @@ def main():
     verbose = get_verbose()
 
     if purpose == "twitter":
+        from classes.Twitter import Twitter
+
         accounts = get_accounts("twitter")
 
         if not account_id:
@@ -138,6 +138,9 @@ def main():
         if verbose:
             success("Done posting.")
     elif purpose == "youtube":
+        from classes.Tts import TTS
+        from classes.YouTube import YouTube
+
         tts = TTS()
 
         accounts = get_accounts("youtube")

@@ -35,8 +35,9 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT_DIR / "src"))
 
 from account_state_machine import AccountStateMachine
+from runtime_python import resolve_runtime_python
 
-VENV_PYTHON = ROOT_DIR / "venv" / "bin" / "python"
+VENV_PYTHON = Path(resolve_runtime_python())
 
 SMART_SCRIPT = ROOT_DIR / "scripts" / "smart_post_twitter.py"
 VERIFY_SCRIPT = ROOT_DIR / "scripts" / "verify_twitter_posts.py"
