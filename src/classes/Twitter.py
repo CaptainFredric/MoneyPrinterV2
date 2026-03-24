@@ -16,7 +16,6 @@ from urllib.parse import quote_plus, urlparse
 from cache import *
 from config import *
 from status import *
-from llm_provider import generate_text
 from publish_verification_hardener import PublishVerificationHardener
 from typing import List, Optional
 from datetime import datetime, timedelta
@@ -116,6 +115,22 @@ class Twitter:
             self.browser = webdriver.Firefox(service=self.service, options=self.options)
 
         self.wait: WebDriverWait = WebDriverWait(self.browser, 30)
+
+    def _generate_text(self, prompt: str) -> str:
+        """
+        Lazily imports the LLM provider only when text generation is needed.
+        This keeps session checks and login utilities resilient when optional
+        LLM-related dependencies are temporarily unavailable.
+
+        Args:
+            prompt (str): Prompt for the text generator.
+
+        Returns:
+            text (str): Generated text or empty string.
+        """
+        from llm_provider import generate_text
+
+        return generate_text(prompt)
 
     def _resolve_geckodriver_path(self) -> str:
         """
@@ -350,14 +365,24 @@ class Twitter:
                 }
             )
             self._record_angle_signature(angle_signature, post_category)
+            phase3_result = self._verify_latest_post_phase3()
             self._log_transaction('post_attempt', 'pending', {
                 'reason': 'unverified',
                 'text_snippet': body[:80],
                 'permalink_debug': self.last_permalink_debug,
                 'confidence_score': confidence_payload["score"],
                 'confidence_level': confidence_payload["level"],
+                'phase3_verified': bool(phase3_result.get('verified', False)),
+                'phase3_match_method': phase3_result.get('match_method', ''),
                 'attempt_time': now.isoformat()
             })
+            if phase3_result.get("error"):
+                warning(f"Phase 3 post-completion verify error: {phase3_result['error']}")
+            elif phase3_result.get("verified"):
+                success(
+                    "Phase 3 verified the new post immediately"
+                    + (f" via {phase3_result.get('match_method', 'unknown')}" if phase3_result.get("match_method") else "")
+                )
             return (
                 "posted:pending-verification:"
                 f"confidence={confidence_payload['score']}:"
@@ -382,6 +407,7 @@ class Twitter:
         )
 
         self._record_angle_signature(angle_signature, post_category)
+        phase3_result = self._verify_latest_post_phase3()
 
         self._log_transaction('post_attempt', 'success', {
             'text_snippet': body[:80],
@@ -389,8 +415,13 @@ class Twitter:
             'category': post_category,
             'confidence_score': confidence_payload["score"],
             'confidence_level': confidence_payload["level"],
+            'phase3_verified': bool(phase3_result.get('verified', False)),
+            'phase3_match_method': phase3_result.get('match_method', ''),
             'attempt_time': now.isoformat()
         })
+
+        if phase3_result.get("error"):
+            warning(f"Phase 3 post-completion verify error: {phase3_result['error']}")
 
         success(f"Posted to Twitter successfully! URL: {tweet_url}")
         return f"posted:confidence={confidence_payload['score']}:level={confidence_payload['level']}"
@@ -1131,8 +1162,15 @@ class Twitter:
                     cached_post.get("date") == target_post.get("date")
                     and cached_post.get("content") == target_post.get("content")
                 ):
+                    attempts_raw = cached_post.get("verification_attempts", 0)
+                    try:
+                        attempts = int(attempts_raw)
+                    except Exception:
+                        attempts = 0
                     cached_post["post_verified"] = verified
                     cached_post["verification_state"] = "verified" if verified else "pending"
+                    cached_post["last_verification_checked_at"] = datetime.now().isoformat(timespec="seconds")
+                    cached_post["verification_attempts"] = 0 if verified else attempts + 1
                     if verified:
                         cached_post["confidence_score"] = 100
                         cached_post["confidence_level"] = "verified"
@@ -1158,6 +1196,104 @@ class Twitter:
         with open(tmp_path, "w") as file:
             json.dump(parsed, file, indent=4)
         os.replace(tmp_path, cache_path)
+
+    def _verify_latest_post_phase3(self) -> dict:
+        """
+        Runs the Phase 3 verification pipeline against the newest cached post.
+
+        Returns:
+            result (dict): Lightweight verification summary.
+        """
+        try:
+            result = self.verify_recent_cached_posts(limit=1, backfill=True)
+        except Exception as exc:
+            return {
+                "verified": False,
+                "tweet_url": "",
+                "match_method": "",
+                "error": str(exc),
+            }
+
+        latest = (result.get("results", []) or [{}])[0]
+        return {
+            "verified": bool(latest.get("verified", False)),
+            "tweet_url": str(latest.get("tweet_url", "") or ""),
+            "match_method": str(latest.get("match_method", "") or ""),
+            "error": str(result.get("error", "") or ""),
+        }
+
+    def _parse_cached_post_datetime(self, date_text: str) -> Optional[datetime]:
+        """
+        Parses cached post date strings into datetime.
+
+        Args:
+            date_text (str): Cached date text
+
+        Returns:
+            parsed (Optional[datetime]): Parsed datetime or None
+        """
+        raw = (date_text or "").strip()
+        if not raw:
+            return None
+
+        formats = [
+            "%m/%d/%Y, %H:%M:%S",
+            "%Y-%m-%d %H:%M:%S",
+            "%Y-%m-%dT%H:%M:%S",
+        ]
+        for fmt in formats:
+            try:
+                return datetime.strptime(raw, fmt)
+            except Exception:
+                continue
+        return None
+
+    def _should_attempt_verification_search(self, cached_post: dict) -> bool:
+        """
+        Determines whether expensive search-based backfill should run.
+
+        Purpose:
+        - Avoid ghost searches on low-signal posts that were likely never published.
+        - Keep verification focused on recent/high-likelihood pending posts.
+
+        Args:
+            cached_post (dict): Cached post entry
+
+        Returns:
+            should_search (bool): Whether to run search fallback
+        """
+        content = str(cached_post.get("content", "")).strip()
+        if len(content) < 25:
+            return False
+
+        signals = cached_post.get("confidence_signals") or {}
+        compose_accepted = bool(signals.get("compose_accepted", False))
+        existing_tweet_url = bool(str(cached_post.get("tweet_url", "")).strip())
+
+        confidence_raw = cached_post.get("confidence_score", 0)
+        try:
+            confidence_score = int(confidence_raw)
+        except Exception:
+            confidence_score = 0
+
+        created_at = self._parse_cached_post_datetime(str(cached_post.get("date", "")))
+        attempts_raw = cached_post.get("verification_attempts", 0)
+        try:
+            verification_attempts = int(attempts_raw)
+        except Exception:
+            verification_attempts = 0
+        age_hours = None
+        if created_at is not None:
+            try:
+                age_hours = (datetime.now() - created_at).total_seconds() / 3600.0
+            except Exception:
+                age_hours = None
+
+        recent_enough = age_hours is None or age_hours <= 12
+        high_likelihood = compose_accepted or existing_tweet_url or confidence_score >= 80
+
+        under_retry_cap = verification_attempts < 3
+        return recent_enough and high_likelihood and under_retry_cap
 
     def verify_recent_cached_posts(self, limit: int = 3, backfill: bool = True, pending_only: bool = False) -> dict:
         """
@@ -1247,10 +1383,10 @@ class Twitter:
                             match_method = "text-similarity"
                             break
 
-            # Strategy 3: Enhanced search fallback (multi-query)
-            if not match_url and cached_content:
+            # Strategy 3: Enhanced search fallback (multi-query, guarded)
+            if not match_url and cached_content and self._should_attempt_verification_search(cached_post):
                 search_queries = PublishVerificationHardener.build_search_queries(
-                    cached_content, max_queries=3
+                    cached_content, max_queries=2
                 )
                 for query in search_queries:
                     recovered = self._resolve_post_permalink_via_search(
@@ -1428,11 +1564,25 @@ class Twitter:
         except Exception:
             return ""
 
+        debug = self.last_permalink_debug if isinstance(self.last_permalink_debug, dict) else {}
+        compose_candidates = int(debug.get("compose_candidates", 0) or 0)
+        timeline_items = int(debug.get("timeline_items", 0) or 0)
+        enough_signal_for_search = (
+            len((posted_text or "").split()) >= 6
+            and len((posted_text or "").strip()) >= 35
+            and (compose_candidates > 0 or timeline_items > 0)
+        )
+
+        if not enough_signal_for_search:
+            if isinstance(self.last_permalink_debug, dict):
+                self.last_permalink_debug["match_method"] = "search-skipped-low-signal"
+            return ""
+
         search_match = self._resolve_post_permalink_via_search(
             handle=handle,
             normalized_target=normalized_target,
             raw_text=posted_text,
-            max_queries=3,
+            max_queries=2,
         )
         if search_match:
             self.last_permalink_debug["match_method"] = "search-text"
@@ -1456,23 +1606,17 @@ class Twitter:
         if not compact:
             return []
 
-        snippets: list[str] = []
-
-        first_words = " ".join(compact.split()[:10]).strip()
-        if first_words:
-            snippets.append(first_words)
-
-        max_chars = 80
-        short_prefix = compact[:max_chars]
-        if len(compact) > max_chars and " " in short_prefix:
-            short_prefix = short_prefix.rsplit(" ", 1)[0]
-        short_prefix = short_prefix.strip()
-        if short_prefix and short_prefix not in snippets:
-            snippets.append(short_prefix)
+        search_terms = PublishVerificationHardener.build_search_queries(compact, max_queries=max_queries)
+        if not search_terms:
+            return []
 
         urls: list[str] = []
-        for snippet in snippets[:max_queries]:
-            query = f'from:{handle} "{snippet}"'
+        for snippet in search_terms[:max_queries]:
+            cleaned = re.sub(r'[^A-Za-z0-9#_\s]', ' ', snippet)
+            cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+            if not cleaned:
+                continue
+            query = f"from:{handle} {cleaned}"
             encoded = quote_plus(query)
             urls.append(f"https://x.com/search?q={encoded}&src=typed_query&f=live")
 
@@ -2873,7 +3017,10 @@ class Twitter:
             f"{recent_snippets or '- none'}"
         )
 
-        completion = generate_text(prompt)
+        try:
+            completion = self._generate_text(prompt)
+        except Exception:
+            return ""
         if not completion:
             return ""
         return self._clean_tweet(completion)
@@ -2930,7 +3077,7 @@ class Twitter:
                     use_link_mode=use_link_mode,
                     use_source_citation=use_source_citation,
                 )
-                completion = generate_text(prompt)
+                completion = self._generate_text(prompt)
                 if not completion:
                     rejection_reasons.append(f"Attempt {attempt + 1}: empty response")
                     time.sleep(1)

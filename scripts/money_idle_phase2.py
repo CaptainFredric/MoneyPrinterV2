@@ -179,6 +179,12 @@ def main() -> None:
     parser.add_argument("--verify-every", type=int, default=3, help="run verify/backfill every N cycles when no qualified post")
     parser.add_argument("--confidence-min-score", type=int, default=int(os.environ.get("MPV2_CONFIDENCE_MIN_SCORE", "80")))
     parser.add_argument("--fast-retry-minutes", type=int, default=4, help="short retry sleep when post confidence is below threshold")
+    parser.add_argument(
+        "--smart-timeout-seconds",
+        type=int,
+        default=int(os.environ.get("MPV2_IDLE_SMART_TIMEOUT_SECONDS", "900")),
+        help="timeout for smart posting subprocess",
+    )
     parser.add_argument("--use-phase3", action="store_true", help="use Phase 3 enhanced verification (better matching)")
     parser.add_argument("--once", action="store_true", help="run one cycle and exit")
     args = parser.parse_args()
@@ -253,7 +259,7 @@ def main() -> None:
                 "--only-account",
                 best_account,
             ]
-            smart_result = _run_cmd(smart_cmd, env)
+            smart_result = _run_cmd(smart_cmd, env, timeout_seconds=args.smart_timeout_seconds)
             smart_output = f"{smart_result.stdout}\n{smart_result.stderr}"
             posted_count = _parse_posted_count(smart_output)
             post_status = _parse_post_status(smart_output)
