@@ -1,0 +1,13 @@
+
+[idle-p2] ========== Cycle 1 started at 2026-03-23T22:30:27 ==========
+[idle-p2] Selected account: EyeCatcher (active:health=92)
+▶ Smart attempt: EyeCatcher
+⏭️  Skip EyeCatcher: firefox-profile-not-found
+Smart attempts: 1 | posted: 0
+[idle-p2] Account EyeCatcher transitioned to: active
+[idle-p2] Account health score: 92
+[idle-p2] Skipping verify/backfill this cycle (no qualified post, non-maintenance cycle).
+[idle-p2] Account states summary:
+niche_launch_1       | ACTIVE     | health= 70 | last=failed:login-required
+EyeCatcher           | ACTIVE     | health= 92 | last=
+[idle-p2] Sleeping 12 minute(s) before next cycle.
