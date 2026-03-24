@@ -141,3 +141,36 @@ Traceback (most recent call last):
     raise ValueError(
 ValueError: Firefox profile path does not exist or is not a directory: /Users/erendiracisneros/Documents/GitHub/PromisesFrontend/MoneyPrinterV2/MoneyPrinter/secrets/twitter_automation_profile_v2
 [idle] Sleeping 16 minute(s) before next cycle.
+[idle] Cycle 5 started at 2026-03-23T21:17:20
+▶ Smart attempt: niche_launch_1
+ℹ️ Initializing Twitter...
+❌ Twitter post failed: Message: Reached error page: about:neterror?e=dnsNotFound&u=https%3A//x.com/home&c=UTF-8&d=We%20can%E2%80%99t%20connect%20to%20the%20server%20at%20x.com.&a=
+Stacktrace:
+RemoteError@chrome://remote/content/shared/RemoteError.sys.mjs:8:8
+WebDriverError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:202:5
+UnknownError@chrome://remote/content/shared/webdriver/Errors.sys.mjs:961:5
+checkReadyState@chrome://remote/content/marionette/navigate.sys.mjs:59:24
+onNavigation@chrome://remote/content/marionette/navigate.sys.mjs:351:39
+emit@resource://gre/modules/EventEmitter.sys.mjs:156:19
+receiveMessage@chrome://remote/content/marionette/actors/MarionetteEventsParent.sys.mjs:33:25
+
+MPV2_SMART_STATUS:niche_launch_1:failed
+Smart attempts: 1 | posted: 0
+========================================================================
+Account : niche_launch_1
+Checked : 3
+Verified: 0
+Error   : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Verified posts   : 0
+========================================================================
+Account : niche_launch_1
+Pending Checked : 6
+Backfilled OK   : 0
+Error          : Could not resolve logged-in X handle from browser profile.
+========================================================================
+Accounts checked : 1
+Pending checked  : 6
+Backfilled total : 0
+[idle] Sleeping 10 minute(s) before next cycle.
