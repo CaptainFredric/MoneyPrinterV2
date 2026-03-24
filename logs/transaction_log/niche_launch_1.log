@@ -513,5 +513,57 @@
     "confidence_score": 93,
     "confidence_level": "high",
     "attempt_time": "2026-03-24T11:24:41.583682"
+  },
+  {
+    "timestamp": "2026-03-24T16:35:41.518953",
+    "account_uuid": "6f4f6c1a-2b4d-4dc9-9e8e-7d0e4f5c1a21",
+    "account_nickname": "niche_launch_1",
+    "action": "post_attempt",
+    "status": "pending",
+    "using_fallback_profile": true,
+    "reason": "unverified",
+    "text_snippet": "Can a 5-minute 'pre-game' routine actually set the tone for a day of focused pro",
+    "permalink_debug": {
+      "expected_handle": "nichenewton",
+      "compose_candidates": 4,
+      "compose_matching_candidates": 0,
+      "compose_samples": [
+        "https://x.com/Thedrivenman/status/2036515801403130111",
+        "https://x.com/i/status/2005188454683214302",
+        "https://x.com/midaqih/status/2036529357888627053",
+        "https://x.com/Mericamemed/status/2036480663465889893"
+      ],
+      "profile_candidates": 5,
+      "timeline_items": 5,
+      "search_queries_tried": [
+        "https://x.com/search?q=from%3ANicheNewton+5+minute+pre+game+routine&src=typed_query&f=live",
+        "https://x.com/search?q=from%3ANicheNewton+%23focusboost+%23timemanagementtips+5+minute&src=typed_query&f=live",
+        "https://x.com/search?q=from%3ANicheNewton+5+minute+pre+game+routine&src=typed_query&f=live",
+        "https://x.com/search?q=from%3ANicheNewton+5+minute+pre+game+routine&src=typed_query&f=live"
+      ],
+      "match_method": "",
+      "pages_tried": [
+        "https://x.com/NicheNewton",
+        "https://x.com/NicheNewton/with_replies",
+        "https://x.com/search?q=from%3ANicheNewton&src=typed_query&f=live",
+        "https://x.com/NicheNewton",
+        "https://x.com/NicheNewton/with_replies",
+        "https://x.com/search?q=from%3ANicheNewton&src=typed_query&f=live",
+        "https://x.com/NicheNewton",
+        "https://x.com/NicheNewton/with_replies",
+        "https://x.com/search?q=from%3ANicheNewton&src=typed_query&f=live",
+        "https://x.com/NicheNewton",
+        "https://x.com/NicheNewton/with_replies",
+        "https://x.com/search?q=from%3ANicheNewton&src=typed_query&f=live",
+        "https://x.com/NicheNewton",
+        "https://x.com/NicheNewton/with_replies",
+        "https://x.com/search?q=from%3ANicheNewton&src=typed_query&f=live"
+      ]
+    },
+    "confidence_score": 39,
+    "confidence_level": "low",
+    "phase3_verified": false,
+    "phase3_match_method": "",
+    "attempt_time": "2026-03-24T16:32:04.101985"
   }
 ]
