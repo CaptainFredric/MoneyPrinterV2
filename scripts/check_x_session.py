@@ -78,7 +78,7 @@ def _check_account_active(account: dict) -> dict:
         return status
     finally:
         try:
-            twitter.browser.quit()
+            twitter.quit()
         except Exception:
             pass
 
