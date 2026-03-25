@@ -1199,7 +1199,7 @@ class Twitter:
                         except Exception:
                             existing_score = 35
                         normalized_score = max(20, min(existing_score, 60))
-                        cached_post.setdefault("publish_likelihood", "pending-unclassified")
+                        cached_post["publish_likelihood"] = self._pending_publish_likelihood(cached_post)
                         cached_post["confidence_score"] = normalized_score
                         cached_post["confidence_level"] = self._confidence_level(normalized_score)
                     if tweet_url is not None:
@@ -1335,11 +1335,75 @@ class Twitter:
             except Exception:
                 age_hours = None
 
-        recent_enough = age_hours is None or age_hours <= 36
-        high_likelihood = compose_accepted or existing_tweet_url or confidence_score >= 80
+        likelihood = self._pending_publish_likelihood(cached_post)
+        high_likelihood = (
+            compose_accepted
+            or existing_tweet_url
+            or confidence_score >= 80
+            or likelihood in {"published-likely", "published-confirmed"}
+        )
 
-        under_retry_cap = verification_attempts < 8
+        max_age_hours = 36
+        retry_cap = 8
+        if likelihood == "published-likely":
+            max_age_hours = 120
+            retry_cap = 20
+        elif likelihood == "published-ambiguous":
+            max_age_hours = 72
+            retry_cap = 12
+
+        recent_enough = age_hours is None or age_hours <= max_age_hours
+        under_retry_cap = verification_attempts < retry_cap
         return recent_enough and high_likelihood and under_retry_cap
+
+    def _pending_publish_likelihood(self, cached_post: dict) -> str:
+        """Infer publish likelihood for a cached pending post."""
+        explicit = str(cached_post.get("publish_likelihood", "")).strip()
+        if explicit and explicit != "pending-unclassified":
+            return explicit
+
+        if str(cached_post.get("tweet_url", "")).strip():
+            return "published-confirmed"
+
+        signals = cached_post.get("confidence_signals") or {}
+        compose_candidates = int(signals.get("compose_candidates", 0) or 0)
+        compose_matching_candidates = int(signals.get("compose_matching_candidates", 0) or 0)
+        timeline_items = int(signals.get("timeline_items", 0) or 0)
+
+        if compose_matching_candidates > 0:
+            return "published-likely"
+        if compose_candidates >= 3 and timeline_items >= 3:
+            return "published-likely"
+        if compose_candidates > 0 or timeline_items > 0:
+            return "published-ambiguous"
+        return "pending-unclassified"
+
+    def _pending_priority_key(self, cached_post: dict) -> tuple[int, int, float]:
+        """Sort key for pending-post recovery priority.
+
+        Lower is better: stronger publish evidence first, fewer attempts next,
+        newer posts before older ones when all else is equal.
+        """
+        likelihood = self._pending_publish_likelihood(cached_post)
+        rank_map = {
+            "published-confirmed": 0,
+            "published-likely": 1,
+            "published-ambiguous": 2,
+            "publish-signal-weak": 3,
+            "pending-unclassified": 4,
+        }
+        attempts_raw = cached_post.get("verification_attempts", 0)
+        try:
+            attempts = int(attempts_raw)
+        except Exception:
+            attempts = 0
+
+        created_at = self._parse_cached_post_datetime(str(cached_post.get("date", "")))
+        timestamp_score = 0.0
+        if created_at is not None:
+            timestamp_score = -created_at.timestamp()
+
+        return (rank_map.get(likelihood, 9), attempts, timestamp_score)
 
     def verify_recent_cached_posts(self, limit: int = 3, backfill: bool = True, pending_only: bool = False) -> dict:
         """
@@ -1361,8 +1425,9 @@ class Twitter:
                 or (str(post.get("verification_state", "")).strip().lower() == "pending")
                 or (not str(post.get("tweet_url", "")).strip())
             ]
+            candidates = sorted(candidates, key=self._pending_priority_key)
 
-        recent_cached = candidates[-limit:] if limit > 0 else []
+        recent_cached = candidates[:limit] if pending_only and limit > 0 else (candidates[-limit:] if limit > 0 else [])
         handle = self.get_live_account_handle()
         if not handle:
             return {
@@ -1429,7 +1494,17 @@ class Twitter:
                             match_method = "text-similarity"
                             break
 
-            # Strategy 3: Enhanced search fallback (multi-query, guarded)
+            # Strategy 3: Direct profile/page recovery before broader search
+            if not match_url and cached_content and self._should_attempt_verification_search(cached_post):
+                recovered = self._recover_permalink_via_profile_pages(
+                    handle=handle,
+                    normalized_target=cached_norm,
+                )
+                if recovered:
+                    match_url = recovered
+                    match_method = "profile-page-recovery"
+
+            # Strategy 4: Enhanced search fallback (multi-query, guarded)
             if not match_url and cached_content and self._should_attempt_verification_search(cached_post):
                 search_queries = PublishVerificationHardener.build_search_queries(
                     cached_content, max_queries=2
@@ -1454,6 +1529,19 @@ class Twitter:
             elif backfill:
                 self._cache_update_post_verification(cached_post, "", False)
 
+            debug_payload = {}
+            if isinstance(self.last_permalink_debug, dict):
+                pages_tried = self.last_permalink_debug.get("pages_tried", []) or []
+                search_queries_tried = self.last_permalink_debug.get("search_queries_tried", []) or []
+                debug_payload = {
+                    "match_method": str(self.last_permalink_debug.get("match_method", "") or ""),
+                    "pages_tried": len(pages_tried),
+                    "search_queries_tried": len(search_queries_tried),
+                    "compose_candidates": int(self.last_permalink_debug.get("compose_candidates", 0) or 0),
+                    "profile_candidates": int(self.last_permalink_debug.get("profile_candidates", 0) or 0),
+                    "timeline_items": int(self.last_permalink_debug.get("timeline_items", 0) or 0),
+                }
+
             results.append(
                 {
                     "date": cached_post.get("date", ""),
@@ -1461,6 +1549,9 @@ class Twitter:
                     "verified": verified,
                     "tweet_url": match_url or cached_url,
                     "match_method": match_method,
+                    "publish_likelihood": self._pending_publish_likelihood(cached_post),
+                    "verification_attempts": cached_post.get("verification_attempts", 0),
+                    "recovery_debug": debug_payload,
                 }
             )
 
@@ -1548,65 +1639,12 @@ class Twitter:
             return ""
 
         try:
-            for _ in range(5):
-                pages = [
-                    f"https://x.com/{handle}",
-                    f"https://x.com/{handle}/with_replies",
-                    f"https://x.com/search?q=from%3A{handle}&src=typed_query&f=live",
-                ]
-
-                for page_url in pages:
-                    self.last_permalink_debug["pages_tried"].append(page_url)
-                    self.browser.get(page_url)
-                    time.sleep(4)
-                    try:
-                        self.browser.execute_script("window.scrollTo(0, 1200);")
-                        time.sleep(2)
-                    except Exception:
-                        pass
-
-                    # Fallback 1: page status links for this exact handle
-                    profile_candidates = self._collect_status_link_candidates()
-                    self.last_permalink_debug["profile_candidates"] = max(
-                        int(self.last_permalink_debug.get("profile_candidates", 0)), len(profile_candidates)
-                    )
-                    if profile_candidates:
-                        handle_lower = handle.lower()
-                        filtered_candidates = []
-                        for candidate in profile_candidates:
-                            match = re.search(r"^https://x\.com/([A-Za-z0-9_]+)/status/\d+$", candidate)
-                            if not match:
-                                continue
-                            if match.group(1).lower() == handle_lower:
-                                filtered_candidates.append(candidate)
-
-                        if filtered_candidates:
-                            weak_candidate = filtered_candidates[0]
-                        else:
-                            weak_candidate = ""
-                    else:
-                        weak_candidate = ""
-
-                    # Fallback 2: text matching on currently loaded page
-                    live_posts = self._collect_timeline_posts_from_current_page(limit=10)
-                    self.last_permalink_debug["timeline_items"] = max(
-                        int(self.last_permalink_debug.get("timeline_items", 0)), len(live_posts)
-                    )
-                    for live_post in live_posts:
-                        live_norm = live_post.get("normalized_text", "")
-                        if normalized_target and live_norm and not self._is_probable_post_match(normalized_target, live_norm):
-                            continue
-                        canonical = live_post.get("tweet_url", "")
-                        if canonical:
-                            self.last_permalink_debug["match_method"] = "timeline-text"
-                            return canonical
-
-                    if weak_candidate:
-                        time.sleep(1)
-                        refreshed = self._collect_status_link_candidates()
-                        if weak_candidate in refreshed and not self._is_permalink_conflict(weak_candidate, normalized_target):
-                            self.last_permalink_debug["match_method"] = "page-weak"
-                            return weak_candidate
+            direct_match = self._recover_permalink_via_profile_pages(
+                handle=handle,
+                normalized_target=normalized_target,
+            )
+            if direct_match:
+                return direct_match
         except Exception:
             return ""
 
@@ -1628,7 +1666,7 @@ class Twitter:
             handle=handle,
             normalized_target=normalized_target,
             raw_text=posted_text,
-            max_queries=2,
+            max_queries=3,
         )
         if search_match:
             self.last_permalink_debug["match_method"] = "search-text"
@@ -1667,6 +1705,106 @@ class Twitter:
             urls.append(f"https://x.com/search?q={encoded}&src=typed_query&f=live")
 
         return urls[:max_queries]
+
+    def _profile_recovery_pages(self, handle: str) -> list[str]:
+        """Return direct pages worth checking before broader text search."""
+        if not handle:
+            return []
+
+        return [
+            f"https://x.com/{handle}",
+            f"https://x.com/{handle}/with_replies",
+            f"https://x.com/{handle}/media",
+            f"https://x.com/search?q=from%3A{handle}&src=typed_query&f=live",
+        ]
+
+    def _recover_permalink_from_loaded_page(
+        self,
+        handle: str,
+        normalized_target: str,
+        limit: int = 18,
+    ) -> str:
+        """Recover a permalink from the currently loaded page if possible."""
+        handle_lower = handle.lower().lstrip("@")
+
+        live_posts = self._collect_timeline_posts_from_current_page(limit=limit)
+        if isinstance(self.last_permalink_debug, dict):
+            self.last_permalink_debug["timeline_items"] = max(
+                int(self.last_permalink_debug.get("timeline_items", 0)), len(live_posts)
+            )
+
+        for live_post in live_posts:
+            live_norm = live_post.get("normalized_text", "")
+            if normalized_target and live_norm and not self._is_probable_post_match(normalized_target, live_norm):
+                continue
+            canonical = live_post.get("tweet_url", "")
+            if canonical and not self._is_permalink_conflict(canonical, normalized_target):
+                return canonical
+
+        status_candidates = self._collect_status_link_candidates()
+        filtered_candidates: list[str] = []
+        for candidate in status_candidates:
+            match = re.search(r"^https://x\.com/([A-Za-z0-9_]+)/status/\d+$", candidate)
+            if not match:
+                continue
+            if match.group(1).lower() == handle_lower:
+                filtered_candidates.append(candidate)
+
+        if isinstance(self.last_permalink_debug, dict):
+            self.last_permalink_debug["profile_candidates"] = max(
+                int(self.last_permalink_debug.get("profile_candidates", 0)), len(filtered_candidates)
+            )
+
+        for candidate in filtered_candidates:
+            if not self._is_permalink_conflict(candidate, normalized_target):
+                return candidate
+
+        return ""
+
+    def _recover_permalink_via_profile_pages(
+        self,
+        handle: str,
+        normalized_target: str,
+    ) -> str:
+        """Sweep direct profile-scoped pages before broader search fallback."""
+        if not handle:
+            return ""
+
+        for page_url in self._profile_recovery_pages(handle):
+            if isinstance(self.last_permalink_debug, dict):
+                self.last_permalink_debug.setdefault("pages_tried", []).append(page_url)
+
+            try:
+                self.browser.get(page_url)
+                time.sleep(3)
+            except Exception:
+                continue
+
+            for scroll_target in (0, 900, 1800, 3200):
+                try:
+                    self.browser.execute_script(f"window.scrollTo(0, {scroll_target});")
+                    time.sleep(1)
+                except Exception:
+                    pass
+
+                recovered = self._recover_permalink_from_loaded_page(
+                    handle=handle,
+                    normalized_target=normalized_target,
+                    limit=18,
+                )
+                if recovered:
+                    if isinstance(self.last_permalink_debug, dict):
+                        if page_url.endswith("/with_replies"):
+                            self.last_permalink_debug["match_method"] = "profile-with-replies"
+                        elif page_url.endswith("/media"):
+                            self.last_permalink_debug["match_method"] = "profile-media"
+                        elif "/search?" in page_url:
+                            self.last_permalink_debug["match_method"] = "profile-live-search"
+                        else:
+                            self.last_permalink_debug["match_method"] = "profile-direct"
+                    return recovered
+
+        return ""
 
     def _resolve_post_permalink_via_search(
         self,

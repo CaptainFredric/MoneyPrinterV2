@@ -131,7 +131,7 @@ def _health_label(entries: list[dict], now: datetime) -> str:
 
 def _infer_pending_likelihood(post: dict) -> str:
     explicit = str(post.get("publish_likelihood", "")).strip()
-    if explicit:
+    if explicit and explicit != "pending-unclassified":
         return explicit
 
     if str(post.get("tweet_url", "")).strip():

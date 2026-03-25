@@ -87,10 +87,23 @@ def _print_result(result: dict) -> None:
         status = "OK" if item.get("verified") else "MISS"
         preview = (item.get("preview", "") or "").replace("\n", " ")
         print(f"- {status:<4} {item.get('date', '')} | {preview[:70]}")
+        if item.get("publish_likelihood"):
+            print(f"       Likelihood: {item['publish_likelihood']} | attempts={item.get('verification_attempts', 0)}")
         if item.get("tweet_url"):
             print(f"       URL: {item['tweet_url']}")
         if item.get("match_method"):
             print(f"       Match: {item['match_method']}")
+        recovery_debug = item.get("recovery_debug") or {}
+        if recovery_debug and not item.get("verified"):
+            print(
+                "       Debug: "
+                f"method={recovery_debug.get('match_method', '') or 'none'} "
+                f"pages={recovery_debug.get('pages_tried', 0)} "
+                f"searches={recovery_debug.get('search_queries_tried', 0)} "
+                f"compose={recovery_debug.get('compose_candidates', 0)} "
+                f"profile={recovery_debug.get('profile_candidates', 0)} "
+                f"timeline={recovery_debug.get('timeline_items', 0)}"
+            )
 
 
 def main() -> None:
