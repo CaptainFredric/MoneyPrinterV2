@@ -348,6 +348,8 @@ class Twitter:
         tweet_url = self._resolve_post_permalink(body)
         resolved_format = "media" if media_path and post_mode == "media" else ("link" if post_urls else "text")
         confidence_payload = self._compute_post_confidence(tweet_url=tweet_url)
+        publish_likelihood = self._classify_publish_likelihood(tweet_url, confidence_payload)
+        publish_evidence = self._build_publish_evidence_snapshot(tweet_url, confidence_payload)
 
         if not tweet_url:
             warning(
@@ -368,6 +370,8 @@ class Twitter:
                     "verification_state": "pending",
                     "verification_attempts": 0,
                     "last_verification_checked_at": "",
+                    "publish_likelihood": publish_likelihood,
+                    "publish_evidence": publish_evidence,
                     "confidence_score": confidence_payload["score"],
                     "confidence_level": confidence_payload["level"],
                     "confidence_signals": confidence_payload["signals"],
@@ -409,6 +413,8 @@ class Twitter:
                 "tweet_url": tweet_url,
                 "post_verified": True,
                 "verification_state": "verified",
+                "publish_likelihood": publish_likelihood,
+                "publish_evidence": publish_evidence,
                 "confidence_score": confidence_payload["score"],
                 "confidence_level": confidence_payload["level"],
                 "confidence_signals": confidence_payload["signals"],
@@ -1183,6 +1189,7 @@ class Twitter:
                     cached_post["verification_attempts"] = 0 if verified else attempts + 1
                     if verified:
                         cached_post["verified_at"] = datetime.now().isoformat(timespec="seconds")
+                        cached_post["publish_likelihood"] = "published-confirmed"
                         cached_post["confidence_score"] = 100
                         cached_post["confidence_level"] = "verified"
                     else:
@@ -1192,10 +1199,20 @@ class Twitter:
                         except Exception:
                             existing_score = 35
                         normalized_score = max(20, min(existing_score, 60))
+                        cached_post.setdefault("publish_likelihood", "pending-unclassified")
                         cached_post["confidence_score"] = normalized_score
                         cached_post["confidence_level"] = self._confidence_level(normalized_score)
                     if tweet_url is not None:
                         cached_post["tweet_url"] = tweet_url
+                    evidence = cached_post.get("publish_evidence")
+                    if not isinstance(evidence, dict):
+                        evidence = {}
+                    evidence["last_verification_checked_at"] = cached_post["last_verification_checked_at"]
+                    evidence["verification_attempts"] = cached_post["verification_attempts"]
+                    evidence["verified"] = bool(verified)
+                    if verified:
+                        evidence["verified_at"] = cached_post.get("verified_at", "")
+                    cached_post["publish_evidence"] = evidence
                     updated = True
                     break
             break
@@ -1422,7 +1439,7 @@ class Twitter:
                         handle=handle,
                         normalized_target=query,
                         raw_text=cached_content,
-                        max_queries=1,
+                        max_queries=2,
                     )
                     if recovered:
                         match_url = recovered
@@ -1684,39 +1701,40 @@ class Twitter:
 
                 self.browser.get(search_url)
                 time.sleep(3)
-                try:
-                    self.browser.execute_script("window.scrollTo(0, 1200);")
-                    time.sleep(1)
-                except Exception:
-                    pass
+                for scroll_target in (1200, 2600):
+                    try:
+                        self.browser.execute_script(f"window.scrollTo(0, {scroll_target});")
+                        time.sleep(1)
+                    except Exception:
+                        pass
 
-                live_posts = self._collect_timeline_posts_from_current_page(limit=15)
-                if isinstance(self.last_permalink_debug, dict):
-                    self.last_permalink_debug["timeline_items"] = max(
-                        int(self.last_permalink_debug.get("timeline_items", 0)), len(live_posts)
-                    )
+                    live_posts = self._collect_timeline_posts_from_current_page(limit=25)
+                    if isinstance(self.last_permalink_debug, dict):
+                        self.last_permalink_debug["timeline_items"] = max(
+                            int(self.last_permalink_debug.get("timeline_items", 0)), len(live_posts)
+                        )
 
-                for live_post in live_posts:
-                    live_norm = live_post.get("normalized_text", "")
-                    if normalized_target and live_norm and not self._is_probable_post_match(normalized_target, live_norm):
-                        continue
-                    canonical = live_post.get("tweet_url", "")
-                    if canonical:
-                        return canonical
+                    for live_post in live_posts:
+                        live_norm = live_post.get("normalized_text", "")
+                        if normalized_target and live_norm and not self._is_probable_post_match(normalized_target, live_norm):
+                            continue
+                        canonical = live_post.get("tweet_url", "")
+                        if canonical:
+                            return canonical
 
-                status_candidates = self._collect_status_link_candidates()
-                handle_lower = handle.lower()
-                filtered = []
-                for candidate in status_candidates:
-                    match = re.search(r"^https://x\.com/([A-Za-z0-9_]+)/status/\d+$", candidate)
-                    if not match:
-                        continue
-                    if match.group(1).lower() == handle_lower:
-                        filtered.append(candidate)
+                    status_candidates = self._collect_status_link_candidates()
+                    handle_lower = handle.lower()
+                    filtered = []
+                    for candidate in status_candidates:
+                        match = re.search(r"^https://x\.com/([A-Za-z0-9_]+)/status/\d+$", candidate)
+                        if not match:
+                            continue
+                        if match.group(1).lower() == handle_lower:
+                            filtered.append(candidate)
 
-                if len(filtered) == 1:
-                    if not self._is_permalink_conflict(filtered[0], normalized_target):
-                        return filtered[0]
+                    for candidate in filtered:
+                        if not self._is_permalink_conflict(candidate, normalized_target):
+                            return candidate
         except Exception:
             return ""
 
@@ -1969,6 +1987,47 @@ class Twitter:
                 "compose_matching_candidates": compose_matching_candidates,
                 "timeline_items": timeline_items,
             },
+        }
+
+    def _sanitize_debug_value(self, value):
+        """Return a JSON-safe lightweight snapshot value."""
+        if isinstance(value, (str, int, float, bool)) or value is None:
+            return value
+        if isinstance(value, list):
+            return [self._sanitize_debug_value(item) for item in value[:12]]
+        if isinstance(value, dict):
+            return {str(key): self._sanitize_debug_value(val) for key, val in list(value.items())[:20]}
+        return str(value)
+
+    def _classify_publish_likelihood(self, tweet_url: str, confidence_payload: dict) -> str:
+        """Classify how likely a pending post was actually published."""
+        if tweet_url:
+            return "published-confirmed"
+
+        signals = confidence_payload.get("signals", {}) if isinstance(confidence_payload, dict) else {}
+        compose_candidates = int(signals.get("compose_candidates", 0) or 0)
+        compose_matching_candidates = int(signals.get("compose_matching_candidates", 0) or 0)
+        timeline_items = int(signals.get("timeline_items", 0) or 0)
+
+        if compose_matching_candidates > 0:
+            return "published-likely"
+        if compose_candidates >= 3 and timeline_items >= 3:
+            return "published-likely"
+        if compose_candidates > 0 or timeline_items > 0:
+            return "published-ambiguous"
+        return "publish-signal-weak"
+
+    def _build_publish_evidence_snapshot(self, tweet_url: str, confidence_payload: dict) -> dict:
+        """Build a lightweight evidence snapshot for post-time publish diagnostics."""
+        debug = self.last_permalink_debug if isinstance(self.last_permalink_debug, dict) else {}
+        return {
+            "captured_at": datetime.now().isoformat(timespec="seconds"),
+            "tweet_url": str(tweet_url or ""),
+            "publish_likelihood": self._classify_publish_likelihood(tweet_url, confidence_payload),
+            "confidence_score": int((confidence_payload or {}).get("score", 0) or 0),
+            "confidence_level": str((confidence_payload or {}).get("level", "") or ""),
+            "signals": self._sanitize_debug_value((confidence_payload or {}).get("signals", {})),
+            "permalink_debug": self._sanitize_debug_value(debug),
         }
 
     def _extract_urls(self, text: str) -> list[str]:
@@ -2888,6 +2947,37 @@ class Twitter:
                 categories.append(category)
         return categories
 
+    def _verified_winning_categories(self, posts: List[dict], limit: int = 20) -> list[str]:
+        """Return recent categories that have produced verified posts."""
+        winners: list[str] = []
+        for prev in reversed(posts[-limit:]):
+            if not bool(prev.get("post_verified", False)):
+                continue
+            category = str(prev.get("category", "")).strip().lower()
+            if not category:
+                category = self._infer_category_from_text(prev.get("content", ""))
+            if category and category not in winners:
+                winners.append(category)
+        return winners
+
+    def _high_pending_categories(self, posts: List[dict], limit: int = 24) -> set[str]:
+        """Return categories with repeated pending outcomes and no verified win in recent history."""
+        pending_counts: dict[str, int] = {}
+        verified_categories: set[str] = set()
+        for prev in posts[-limit:]:
+            category = str(prev.get("category", "")).strip().lower()
+            if not category:
+                category = self._infer_category_from_text(prev.get("content", ""))
+            if not category:
+                continue
+            if bool(prev.get("post_verified", False)):
+                verified_categories.add(category)
+                continue
+            if str(prev.get("verification_state", "")).strip().lower() == "pending":
+                pending_counts[category] = pending_counts.get(category, 0) + 1
+
+        return {category for category, count in pending_counts.items() if count >= 2 and category not in verified_categories}
+
     def _build_prompt(
         self,
         existing_posts: list[dict],
@@ -2946,14 +3036,32 @@ class Twitter:
 
         category_pool = self._topic_category_pool()
         recent_categories = self._recent_categories(existing_posts, limit=8)
+        winning_categories = self._verified_winning_categories(existing_posts, limit=20)
+        pending_heavy_categories = self._high_pending_categories(existing_posts, limit=24)
         category_block = ""
         if category_pool:
-            category_list = ", ".join(category_pool)
+            ordered_categories = [category for category in winning_categories if category in category_pool]
+            ordered_categories.extend(
+                category
+                for category in category_pool
+                if category not in ordered_categories and category not in pending_heavy_categories
+            )
+            ordered_categories.extend(
+                category
+                for category in category_pool
+                if category not in ordered_categories
+            )
+            category_list = ", ".join(ordered_categories)
             recent_list = ", ".join(recent_categories[:4]) if recent_categories else "none"
+            winner_list = ", ".join(winning_categories[:3]) if winning_categories else "none"
+            pending_list = ", ".join(sorted(pending_heavy_categories)[:4]) if pending_heavy_categories else "none"
             category_block = (
                 "\nCategory rotation:\n"
-                f"  - Allowed categories: {category_list}\n"
+                f"  - Allowed categories (ordered by proven performance): {category_list}\n"
+                f"  - Verified-winning categories to favor: {winner_list}\n"
+                f"  - High-pending categories to use sparingly: {pending_list}\n"
                 f"  - Recently used categories: {recent_list}\n"
+                "  - Favor verified-winning categories when they are not too recent.\n"
                 "  - Pick a different category than recent posts when possible.\n"
             )
 

@@ -33,9 +33,16 @@ Per-account state record:
 """
 
 import json
+import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
+
+SRC_DIR = Path(__file__).resolve().parent
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
+
+from account_performance import get_account_cache_metrics
 
 
 class AccountStateMachine:
@@ -259,6 +266,19 @@ class AccountStateMachine:
         state["pause_expires_at"] = (datetime.now() + timedelta(minutes=minutes)).isoformat(timespec="seconds")
         self.save()
 
+    def _account_performance_bias(self, account: str) -> tuple[int, int, int]:
+        """Return lightweight performance signals from cached Twitter results.
+
+        Returns:
+            tuple[int, int, int]: (verified_posts, pending_posts, recent_verified_posts)
+        """
+        metrics = get_account_cache_metrics(account)
+        return (
+            int(metrics.get("verified", 0) or 0),
+            int(metrics.get("pending", 0) or 0),
+            int(metrics.get("recent_verified", 0) or 0),
+        )
+
     def get_best_eligible_account(self, accounts: list[str]) -> Optional[str]:
         """Select the best eligible account for posting attempt.
         
@@ -273,7 +293,8 @@ class AccountStateMachine:
             if is_elig:
                 state = self.get_state(account)
                 health = state.get("health_score", 50)
-                eligible.append((account, state["state"], health))
+                verified_posts, pending_posts, recent_verified_posts = self._account_performance_bias(account)
+                eligible.append((account, state["state"], health, verified_posts, pending_posts, recent_verified_posts))
 
         if not eligible:
             return None
@@ -284,6 +305,9 @@ class AccountStateMachine:
             key=lambda x: (
                 state_priority.get(x[1], 99),
                 -x[2],  # negative health for descending sort
+                -x[5],  # recent verified wins first
+                -x[3],  # lifetime verified wins next
+                x[4],   # fewer pending posts preferred on ties
             )
         )
         return eligible[0][0]

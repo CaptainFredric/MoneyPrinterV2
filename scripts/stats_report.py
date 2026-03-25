@@ -11,17 +11,24 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from collections import Counter
 from datetime import datetime, timedelta
 from pathlib import Path
 
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
+SRC_DIR = ROOT_DIR / "src"
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
+
 CACHE_PATH = ROOT_DIR / ".mp" / "twitter.json"
 RUNTIME_DIR = ROOT_DIR / ".mp" / "runtime"
 PID_FILE = RUNTIME_DIR / "money_idle.pid"
 STATE_FILE = RUNTIME_DIR / "money_idle_state.json"
 LOG_DIR = ROOT_DIR / "logs" / "transaction_log"
+
+from account_performance import get_account_cache_metrics, recovery_mode_decision
 
 STRUCTURAL_REASONS = {
     "profile-posts-unavailable",
@@ -122,6 +129,28 @@ def _health_label(entries: list[dict], now: datetime) -> str:
     return "unknown"
 
 
+def _infer_pending_likelihood(post: dict) -> str:
+    explicit = str(post.get("publish_likelihood", "")).strip()
+    if explicit:
+        return explicit
+
+    if str(post.get("tweet_url", "")).strip():
+        return "published-confirmed"
+
+    signals = post.get("confidence_signals") or {}
+    compose_candidates = int(signals.get("compose_candidates", 0) or 0)
+    compose_matching_candidates = int(signals.get("compose_matching_candidates", 0) or 0)
+    timeline_items = int(signals.get("timeline_items", 0) or 0)
+
+    if compose_matching_candidates > 0:
+        return "published-likely"
+    if compose_candidates >= 3 and timeline_items >= 3:
+        return "published-likely"
+    if compose_candidates > 0 or timeline_items > 0:
+        return "published-ambiguous"
+    return "pending-unclassified"
+
+
 def main() -> None:
     now = datetime.now()
     cache_data = _load_json(CACHE_PATH)
@@ -139,6 +168,8 @@ def main() -> None:
     if isinstance(state_data, dict) and state_data:
         print(f"Idle cycle      : {state_data.get('cycle', '-')}")
         print(f"Idle status     : {state_data.get('status', '-')}")
+        if "recovery_mode" in state_data:
+            print(f"Recovery mode   : {'yes' if state_data.get('recovery_mode') else 'no'}")
         print(f"Idle started    : {_fmt_time(state_data.get('started_at'))}")
         print(f"Idle finished   : {_fmt_time(state_data.get('finished_at') or state_data.get('stopped_at'))}")
         print(f"Idle posted     : {state_data.get('posted_count', '-')}")
@@ -158,6 +189,11 @@ def main() -> None:
         verified = sum(1 for item in posts if item.get("post_verified") is True)
         pending = sum(1 for item in posts if str(item.get("verification_state", "")).strip() == "pending")
         with_url = sum(1 for item in posts if str(item.get("tweet_url", "")).strip())
+        pending_likelihoods = Counter(
+            _infer_pending_likelihood(item)
+            for item in posts
+            if str(item.get("verification_state", "")).strip().lower() == "pending"
+        )
 
         confidence_scores: list[int] = []
         for item in posts:
@@ -189,15 +225,40 @@ def main() -> None:
 
         status_counts = Counter(str(item.get("status", "unknown")).strip().lower() for item in recent_entries)
         health = _health_label(entries, now)
+        perf = get_account_cache_metrics(nickname)
+        recovery = recovery_mode_decision(nickname, int(state_data.get("cycle", 1) or 1))
         last = entries[-1] if entries else {}
         last_ts = _fmt_time(last.get("timestamp"))
         last_status = str(last.get("status", "-"))
         last_reason = str(last.get("reason", "")).strip() or "-"
+        latest_pending = next(
+            (
+                item for item in reversed(posts)
+                if str(item.get("verification_state", "")).strip().lower() == "pending"
+            ),
+            {},
+        )
+        latest_pending_likelihood = _infer_pending_likelihood(latest_pending) if latest_pending else "-"
+        latest_pending_attempts = latest_pending.get("verification_attempts", "-")
 
         print(f"Account         : {nickname}")
         print(f"Handle          : @{handle}" if handle else "Handle          : -")
         print(f"Health          : {health}")
+        print(
+            "Recovery        : "
+            f"{'verify-first' if recovery.get('use_recovery_mode') else 'normal-posting'} "
+            f"| verified={perf.get('verified', 0)} pending={perf.get('pending', 0)} recent_verified={perf.get('recent_verified', 0)}"
+        )
         print(f"Cache posts     : total={len(posts)} verified={verified} pending={pending} with_url={with_url}")
+        if pending:
+            pending_breakdown = " ".join(
+                f"{label}={count}" for label, count in sorted(pending_likelihoods.items())
+            )
+            print(f"Pending signals : {pending_breakdown}")
+            print(
+                "Latest pending : "
+                f"likelihood={latest_pending_likelihood} attempts={latest_pending_attempts}"
+            )
         print(
             "Confidence     : "
             f"avg={avg_conf} "
