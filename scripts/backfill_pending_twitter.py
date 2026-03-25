@@ -15,6 +15,7 @@ Usage:
 import argparse
 import json
 import os
+import signal
 import sys
 import time
 from pathlib import Path
@@ -56,20 +57,26 @@ def _resolve_accounts(identifier: str) -> list[dict]:
 
 def _run_backfill_for_account(account: dict, limit: int) -> dict:
     nickname = account.get("nickname", account.get("id", "unknown")[:8])
-    twitter = Twitter(
-        account["id"],
-        nickname,
-        account["firefox_profile"],
-        account.get("topic", ""),
-        account.get("browser_binary", ""),
-    )
+    # Shield this process from SIGINT while the browser is active so that
+    # Ctrl-C in the parent terminal does not kill a mid-flight verification.
+    _old_sigint = signal.signal(signal.SIGINT, signal.SIG_IGN)
     try:
-        return twitter.verify_pending_cached_posts(limit=limit, backfill=True)
-    finally:
+        twitter = Twitter(
+            account["id"],
+            nickname,
+            account["firefox_profile"],
+            account.get("topic", ""),
+            account.get("browser_binary", ""),
+        )
         try:
-            twitter.browser.quit()
-        except Exception:
-            pass
+            return twitter.verify_pending_cached_posts(limit=limit, backfill=True)
+        finally:
+            try:
+                twitter.browser.quit()
+            except Exception:
+                pass
+    finally:
+        signal.signal(signal.SIGINT, _old_sigint)
 
 
 def _print_result(result: dict) -> None:

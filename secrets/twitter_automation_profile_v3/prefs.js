@@ -18,7 +18,7 @@ user_pref("app.update.checkInstallTime", false);
 user_pref("app.update.disabledForTesting", true);
 user_pref("app.update.lastUpdateTime.addon-background-update-timer", 1774435473);
 user_pref("app.update.lastUpdateTime.background-update-timer", 1774436883);
-user_pref("app.update.lastUpdateTime.browser-cleanup-thumbnails", 1774450519);
+user_pref("app.update.lastUpdateTime.browser-cleanup-thumbnails", 1774454119);
 user_pref("app.update.lastUpdateTime.glean-addons-daily", 1774435473);
 user_pref("app.update.lastUpdateTime.region-update-timer", 1774161222);
 user_pref("app.update.lastUpdateTime.rs-experiment-loader-timer", 1774385668);

@@ -540,5 +540,70 @@
     "phase3_verified": false,
     "phase3_match_method": "",
     "attempt_time": "2026-03-24T16:12:04.347032"
+  },
+  {
+    "timestamp": "2026-03-25T10:42:20.701267",
+    "account_uuid": "8d11dbfb-cdd8-4db7-9830-8ee115748e52",
+    "account_nickname": "EyeCatcher",
+    "action": "post_attempt",
+    "status": "pending",
+    "using_fallback_profile": false,
+    "reason": "unverified",
+    "text_snippet": "Your memories may be holding a secret: you're more likely to remember events tha",
+    "permalink_debug": {
+      "expected_handle": "eyecaughtthat2",
+      "compose_candidates": 5,
+      "compose_matching_candidates": 0,
+      "compose_samples": [
+        "https://x.com/elonmusk/status/2036792591027765489",
+        "https://x.com/elonmusk/status/2036693879270064369",
+        "https://x.com/pascal_bornet/status/2036669665930514697",
+        "https://x.com/ycombinator/status/2036512648326684820",
+        "https://x.com/Dailymeoww1/status/2036721178304278817"
+      ],
+      "profile_candidates": 0,
+      "timeline_items": 0,
+      "search_queries_tried": [
+        "https://x.com/search?q=from%3AEyeCaughtThat2+memories+holding+secret&src=typed_query&f=live",
+        "https://x.com/search?q=from%3AEyeCaughtThat2+%23memorymanipulation+%23neuroscience+memories&src=typed_query&f=live",
+        "https://x.com/search?q=from%3AEyeCaughtThat2+secret+you+re+likely&src=typed_query&f=live",
+        "https://x.com/search?q=from%3AEyeCaughtThat2+memories+holding+secret&src=typed_query&f=live",
+        "https://x.com/search?q=from%3AEyeCaughtThat2+%23memorymanipulation+%23neuroscience+memories&src=typed_query&f=live",
+        "https://x.com/search?q=from%3AEyeCaughtThat2+memories+holding+secret&src=typed_query&f=live",
+        "https://x.com/search?q=from%3AEyeCaughtThat2+%23memorymanipulation+%23neuroscience+memories&src=typed_query&f=live",
+        "https://x.com/search?q=from%3AEyeCaughtThat2+memories+holding+secret&src=typed_query&f=live",
+        "https://x.com/search?q=from%3AEyeCaughtThat2+%23memorymanipulation+%23neuroscience+memories&src=typed_query&f=live",
+        "https://x.com/search?q=from%3AEyeCaughtThat2+memories+holding+secret&src=typed_query&f=live",
+        "https://x.com/search?q=from%3AEyeCaughtThat2+%23memorymanipulation+%23neuroscience+memories&src=typed_query&f=live",
+        "https://x.com/search?q=from%3AEyeCaughtThat2+memories+holding+secret&src=typed_query&f=live",
+        "https://x.com/search?q=from%3AEyeCaughtThat2+%23memorymanipulation+%23neuroscience+memories&src=typed_query&f=live",
+        "https://x.com/search?q=from%3AEyeCaughtThat2+memories+holding+secret&src=typed_query&f=live",
+        "https://x.com/search?q=from%3AEyeCaughtThat2+%23memorymanipulation+%23neuroscience+memories&src=typed_query&f=live"
+      ],
+      "match_method": "",
+      "pages_tried": [
+        "https://x.com/EyeCaughtThat2",
+        "https://x.com/EyeCaughtThat2/with_replies",
+        "https://x.com/EyeCaughtThat2/media",
+        "https://x.com/search?q=from%3AEyeCaughtThat2&src=typed_query&f=live",
+        "https://x.com/EyeCaughtThat2",
+        "https://x.com/EyeCaughtThat2/with_replies",
+        "https://x.com/EyeCaughtThat2/media",
+        "https://x.com/search?q=from%3AEyeCaughtThat2&src=typed_query&f=live",
+        "https://x.com/EyeCaughtThat2",
+        "https://x.com/EyeCaughtThat2/with_replies",
+        "https://x.com/EyeCaughtThat2/media",
+        "https://x.com/search?q=from%3AEyeCaughtThat2&src=typed_query&f=live",
+        "https://x.com/EyeCaughtThat2",
+        "https://x.com/EyeCaughtThat2/with_replies",
+        "https://x.com/EyeCaughtThat2/media",
+        "https://x.com/search?q=from%3AEyeCaughtThat2&src=typed_query&f=live"
+      ]
+    },
+    "confidence_score": 35,
+    "confidence_level": "low",
+    "phase3_verified": false,
+    "phase3_match_method": "",
+    "attempt_time": "2026-03-25T10:38:16.879223"
   }
 ]

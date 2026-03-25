@@ -59,6 +59,12 @@ def _is_confidence_qualified(post_status: str, min_score: int) -> tuple[bool, st
     score, level = _parse_confidence(post_status)
     if score < 0:
         return False, "missing-confidence"
+    # A pending-verification post means compose was accepted by X but the
+    # permalink lookup timed-out/failed — the tweet IS live, just not confirmed
+    # yet.  Treat it as qualified so the orchestrator counts it as "posted" and
+    # a later backfill sweep can recover the URL.
+    if "pending-verification" in (post_status or ""):
+        return True, f"pending-verification-accepted:score={score}"
     if score < min_score:
         return False, f"low-confidence:score={score}:level={level or 'unknown'}"
     if level and level not in {"high", "verified"}:

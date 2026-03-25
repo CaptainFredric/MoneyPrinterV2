@@ -585,5 +585,80 @@
     "using_fallback_profile": true,
     "reason": "cooldown:21m",
     "attempt_time": "2026-03-25T00:54:05.794600"
+  },
+  {
+    "timestamp": "2026-03-25T10:10:24.835786",
+    "account_uuid": "6f4f6c1a-2b4d-4dc9-9e8e-7d0e4f5c1a21",
+    "account_nickname": "niche_launch_1",
+    "action": "post_attempt",
+    "status": "pending",
+    "using_fallback_profile": true,
+    "reason": "unverified",
+    "text_snippet": "Ever wondered why some tasks take 10x longer than expected? It's not the task it",
+    "permalink_debug": {
+      "expected_handle": "nichenewton",
+      "compose_candidates": 5,
+      "compose_matching_candidates": 0,
+      "compose_samples": [
+        "https://x.com/elonmusk/status/2036792591027765489",
+        "https://x.com/yoxics/status/2036629144021442782",
+        "https://x.com/i/status/2036628936009155059",
+        "https://x.com/xevekiah/status/2036765548940251639",
+        "https://x.com/euphemey/status/2022871155162685703"
+      ],
+      "profile_candidates": 4,
+      "timeline_items": 4,
+      "search_queries_tried": [
+        "https://x.com/search?q=from%3ANicheNewton+wondered+tasks+longer&src=typed_query&f=live",
+        "https://x.com/search?q=from%3ANicheNewton+%23productivityefficiency+%23timemanagementhacks+wondered&src=typed_query&f=live",
+        "https://x.com/search?q=from%3ANicheNewton+longer+expected+itself&src=typed_query&f=live",
+        "https://x.com/search?q=from%3ANicheNewton+wondered+tasks+longer&src=typed_query&f=live",
+        "https://x.com/search?q=from%3ANicheNewton+%23productivityefficiency+%23timemanagementhacks+wondered&src=typed_query&f=live",
+        "https://x.com/search?q=from%3ANicheNewton+wondered+tasks+longer&src=typed_query&f=live",
+        "https://x.com/search?q=from%3ANicheNewton+%23productivityefficiency+%23timemanagementhacks+wondered&src=typed_query&f=live",
+        "https://x.com/search?q=from%3ANicheNewton+wondered+tasks+longer&src=typed_query&f=live",
+        "https://x.com/search?q=from%3ANicheNewton+%23productivityefficiency+%23timemanagementhacks+wondered&src=typed_query&f=live",
+        "https://x.com/search?q=from%3ANicheNewton+wondered+tasks+longer&src=typed_query&f=live",
+        "https://x.com/search?q=from%3ANicheNewton+%23productivityefficiency+%23timemanagementhacks+wondered&src=typed_query&f=live",
+        "https://x.com/search?q=from%3ANicheNewton+wondered+tasks+longer&src=typed_query&f=live",
+        "https://x.com/search?q=from%3ANicheNewton+%23productivityefficiency+%23timemanagementhacks+wondered&src=typed_query&f=live",
+        "https://x.com/search?q=from%3ANicheNewton+wondered+tasks+longer&src=typed_query&f=live",
+        "https://x.com/search?q=from%3ANicheNewton+%23productivityefficiency+%23timemanagementhacks+wondered&src=typed_query&f=live"
+      ],
+      "match_method": "",
+      "pages_tried": [
+        "https://x.com/NicheNewton",
+        "https://x.com/NicheNewton/with_replies",
+        "https://x.com/NicheNewton/media",
+        "https://x.com/search?q=from%3ANicheNewton&src=typed_query&f=live",
+        "https://x.com/NicheNewton",
+        "https://x.com/NicheNewton/with_replies",
+        "https://x.com/NicheNewton/media",
+        "https://x.com/search?q=from%3ANicheNewton&src=typed_query&f=live",
+        "https://x.com/NicheNewton",
+        "https://x.com/NicheNewton/with_replies",
+        "https://x.com/NicheNewton/media",
+        "https://x.com/search?q=from%3ANicheNewton&src=typed_query&f=live",
+        "https://x.com/NicheNewton",
+        "https://x.com/NicheNewton/with_replies",
+        "https://x.com/NicheNewton/media",
+        "https://x.com/search?q=from%3ANicheNewton&src=typed_query&f=live"
+      ]
+    },
+    "confidence_score": 39,
+    "confidence_level": "low",
+    "phase3_verified": false,
+    "phase3_match_method": "",
+    "attempt_time": "2026-03-25T10:06:04.165811"
+  },
+  {
+    "timestamp": "2026-03-25T10:20:54.764513",
+    "account_uuid": "6f4f6c1a-2b4d-4dc9-9e8e-7d0e4f5c1a21",
+    "account_nickname": "niche_launch_1",
+    "action": "post_attempt",
+    "status": "skipped",
+    "using_fallback_profile": true,
+    "reason": "cooldown:15m",
+    "attempt_time": "2026-03-25T10:20:54.754713"
   }
 ]
