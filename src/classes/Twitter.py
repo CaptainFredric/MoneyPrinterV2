@@ -16,7 +16,7 @@ from urllib.parse import quote_plus, urlparse
 from cache import *
 from config import *
 from status import *
-from firefox_runtime import resolve_firefox_binary
+from firefox_runtime import resolve_firefox_binary, clear_profile_locks
 from publish_verification_hardener import PublishVerificationHardener
 from typing import List, Optional
 from datetime import datetime, timedelta
@@ -59,7 +59,9 @@ class Twitter:
         self.account_nickname: str = account_nickname
         self.fp_profile_path: str = fp_profile_path
         self.topic: str = topic
-        self.browser_binary: str = resolve_firefox_binary(browser_binary)
+        # Resolve binary with profile awareness: compatibility.ini is read so
+        # the correct edition (stable vs Developer) is automatically selected.
+        self.browser_binary: str = resolve_firefox_binary(browser_binary, profile_path=fp_profile_path)
         self.using_fallback_profile: bool = False
         self.fallback_profile_path: str = ""
         self.post_attempt_timestamp: Optional[datetime] = None
@@ -86,6 +88,10 @@ class Twitter:
         # Set the profile path
         self.options.add_argument("-profile")
         self.options.add_argument(fp_profile_path)
+
+        # Clear any stale Firefox lock files before launching the browser.
+        # A leftover .parentlock from a previous crash causes status-0 failures.
+        clear_profile_locks(fp_profile_path)
 
         # Set the service (prefer local/cached geckodriver for offline resilience)
         self.service: Service = Service(self._resolve_geckodriver_path())
