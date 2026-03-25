@@ -17,6 +17,7 @@ import argparse
 import json
 import os
 import re
+import signal
 import subprocess
 import sys
 from datetime import datetime
@@ -232,13 +233,20 @@ def _try_account(account: dict, headless: bool) -> tuple[str, str]:
 
         python_exec = _get_python_executable()
         cmd = [python_exec, str(CRON_SCRIPT), "twitter", account["id"], model]
-        result = subprocess.run(
-            cmd,
-            env=env,
-            timeout=timeout_seconds,
-            capture_output=True,
-            text=True,
-        )
+        # Shield the parent from SIGINT while the child runs so Ctrl-C in the
+        # terminal doesn't kill the wrapper before the child finishes.
+        _old_sigint = signal.signal(signal.SIGINT, signal.SIG_IGN)
+        try:
+            result = subprocess.run(
+                cmd,
+                env=env,
+                timeout=timeout_seconds,
+                capture_output=True,
+                text=True,
+                start_new_session=True,
+            )
+        finally:
+            signal.signal(signal.SIGINT, _old_sigint)
 
         if result.stdout:
             print(result.stdout, end="" if result.stdout.endswith("\n") else "\n")
@@ -350,16 +358,19 @@ def main() -> None:
 
     posted_count = 0
     attempted = 0
-    for account in accounts:
-        attempted += 1
-        nickname = account.get("nickname", account.get("id", "unknown")[:8])
-        print(f"▶ Smart attempt: {nickname}")
-        outcome, _ = _try_account(account, headless=args.headless)
-        if outcome == "posted":
-            posted_count += 1
-            print(f"✅ Smart post success on {nickname}")
-            if not args.all_attempts:
-                break
+    try:
+        for account in accounts:
+            attempted += 1
+            nickname = account.get("nickname", account.get("id", "unknown")[:8])
+            print(f"▶ Smart attempt: {nickname}")
+            outcome, _ = _try_account(account, headless=args.headless)
+            if outcome == "posted":
+                posted_count += 1
+                print(f"✅ Smart post success on {nickname}")
+                if not args.all_attempts:
+                    break
+    except KeyboardInterrupt:
+        print("\n⚠️  Interrupted — partial run completed.", file=sys.stderr)
 
     print(f"Smart attempts: {attempted} | posted: {posted_count}")
     if posted_count > 0:

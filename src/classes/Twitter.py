@@ -1496,9 +1496,16 @@ class Twitter:
 
             # Strategy 3: Direct profile/page recovery before broader search
             if not match_url and cached_content and self._should_attempt_verification_search(cached_post):
+                created_at = self._parse_cached_post_datetime(str(cached_post.get("date", "")))
+                age_hours = (
+                    (datetime.now() - created_at).total_seconds() / 3600.0
+                    if created_at else 0.0
+                )
+                stale_post = age_hours > 48
                 recovered = self._recover_permalink_via_profile_pages(
                     handle=handle,
                     normalized_target=cached_norm,
+                    stale=stale_post,
                 )
                 if recovered:
                     match_url = recovered
@@ -1642,6 +1649,7 @@ class Twitter:
             direct_match = self._recover_permalink_via_profile_pages(
                 handle=handle,
                 normalized_target=normalized_target,
+                stale=False,  # post-time: always fresh, scan all pages
             )
             if direct_match:
                 return direct_match
@@ -1706,11 +1714,20 @@ class Twitter:
 
         return urls[:max_queries]
 
-    def _profile_recovery_pages(self, handle: str) -> list[str]:
-        """Return direct pages worth checking before broader text search."""
+    def _profile_recovery_pages(self, handle: str, stale: bool = False) -> list[str]:
+        """Return direct pages worth checking before broader text search.
+
+        stale=True means the post is older than ~48h: skip media/search pages
+        since recent feed pages are cheapest and most likely to hit.
+        """
         if not handle:
             return []
 
+        if stale:
+            return [
+                f"https://x.com/{handle}",
+                f"https://x.com/{handle}/with_replies",
+            ]
         return [
             f"https://x.com/{handle}",
             f"https://x.com/{handle}/with_replies",
@@ -1765,22 +1782,53 @@ class Twitter:
         self,
         handle: str,
         normalized_target: str,
+        stale: bool = False,
     ) -> str:
-        """Sweep direct profile-scoped pages before broader search fallback."""
+        """Sweep direct profile-scoped pages before broader search fallback.
+
+        Cost controls:
+        - stale=True limits pages to profile + with_replies only
+        - Returns immediately after finding a match on the initial page load
+        - Only scrolls deeper when the first pass found status links but no match
+        - Skips further scroll steps when the page returned 0 timeline items
+        """
         if not handle:
             return ""
 
-        for page_url in self._profile_recovery_pages(handle):
+        for page_url in self._profile_recovery_pages(handle, stale=stale):
             if isinstance(self.last_permalink_debug, dict):
                 self.last_permalink_debug.setdefault("pages_tried", []).append(page_url)
 
             try:
                 self.browser.get(page_url)
-                time.sleep(3)
+                time.sleep(2)
             except Exception:
                 continue
 
-            for scroll_target in (0, 900, 1800, 3200):
+            # Fast check immediately after page load (no scroll yet)
+            initial = self._recover_permalink_from_loaded_page(
+                handle=handle,
+                normalized_target=normalized_target,
+                limit=18,
+            )
+            if initial:
+                if isinstance(self.last_permalink_debug, dict):
+                    if page_url.endswith("/with_replies"):
+                        self.last_permalink_debug["match_method"] = "profile-with-replies"
+                    elif page_url.endswith("/media"):
+                        self.last_permalink_debug["match_method"] = "profile-media"
+                    elif "/search?" in page_url:
+                        self.last_permalink_debug["match_method"] = "profile-live-search"
+                    else:
+                        self.last_permalink_debug["match_method"] = "profile-direct"
+                return initial
+
+            # Only scroll if the page already has some status links (worth deeper look)
+            page_has_links = bool(self._collect_status_link_candidates())
+            if not page_has_links:
+                continue
+
+            for scroll_target in (900, 2000):
                 try:
                     self.browser.execute_script(f"window.scrollTo(0, {scroll_target});")
                     time.sleep(1)
