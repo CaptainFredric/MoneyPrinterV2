@@ -669,5 +669,42 @@
     "phase3_verified": false,
     "phase3_match_method": "",
     "attempt_time": "2026-03-25T12:33:47.359496"
+  },
+  {
+    "timestamp": "2026-03-25T14:28:07.776581",
+    "account_uuid": "8d11dbfb-cdd8-4db7-9830-8ee115748e52",
+    "account_nickname": "EyeCatcher",
+    "action": "post_attempt",
+    "status": "failed",
+    "using_fallback_profile": false,
+    "reason": "compose-not-confirmed",
+    "text_snippet": "Did you know that you're more likely to remember things that happened in the pas",
+    "attempt_time": "2026-03-25T14:27:28.801942"
+  },
+  {
+    "timestamp": "2026-03-25T14:33:10.694108",
+    "account_uuid": "8d11dbfb-cdd8-4db7-9830-8ee115748e52",
+    "account_nickname": "EyeCatcher",
+    "action": "post_attempt",
+    "status": "success",
+    "using_fallback_profile": false,
+    "text_snippet": "Your brain's 'default mode' network is active when daydreaming, not focused on t",
+    "tweet_url": "https://x.com/EyeCaughtThat2/status/2036889120555823138",
+    "category": "human-body",
+    "confidence_score": 93,
+    "confidence_level": "high",
+    "phase3_verified": true,
+    "phase3_match_method": "permalink-url",
+    "attempt_time": "2026-03-25T14:32:58.666102"
+  },
+  {
+    "timestamp": "2026-03-25T14:40:03.466730",
+    "account_uuid": "8d11dbfb-cdd8-4db7-9830-8ee115748e52",
+    "account_nickname": "EyeCatcher",
+    "action": "post_attempt",
+    "status": "skipped",
+    "using_fallback_profile": false,
+    "reason": "cooldown:22m",
+    "attempt_time": "2026-03-25T14:40:03.462005"
   }
 ]
