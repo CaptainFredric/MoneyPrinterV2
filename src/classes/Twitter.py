@@ -9,6 +9,7 @@ import shutil
 import tempfile
 import platform
 from difflib import SequenceMatcher
+from pathlib import Path
 from uuid import uuid4
 import requests
 from urllib.parse import quote_plus, urlparse
@@ -128,6 +129,28 @@ class Twitter:
 
         self.wait: WebDriverWait = WebDriverWait(self.browser, 30)
 
+    def _sync_fallback_cookies_to_real_profile(self) -> None:
+        """Copy cookies.sqlite (and WAL/SHM) from the fallback temp profile
+        back to the real profile so auth tokens are preserved across sessions.
+
+        Called just before browser.quit() whenever using_fallback_profile=True.
+        Safe to call when not in fallback mode (no-op).
+        """
+        if not self.using_fallback_profile or not self.fallback_profile_path:
+            return
+        src_dir = Path(self.fallback_profile_path)
+        dst_dir = Path(self.fp_profile_path)
+        if not dst_dir.is_dir():
+            return
+        for fname in ("cookies.sqlite", "cookies.sqlite-shm", "cookies.sqlite-wal"):
+            src = src_dir / fname
+            dst = dst_dir / fname
+            if src.exists():
+                try:
+                    shutil.copy2(str(src), str(dst))
+                except Exception:
+                    pass
+
     def _generate_text(self, prompt: str) -> str:
         """
         Lazily imports the LLM provider only when text generation is needed.
@@ -188,11 +211,26 @@ class Twitter:
         try:
             status = self._do_post(text)
         finally:
+            # Preserve auth cookies if we were running on a fallback temp profile.
+            self._sync_fallback_cookies_to_real_profile()
             try:
                 self.browser.quit()
             except Exception:
                 pass
         return status
+
+    def quit(self) -> None:
+        """Sync fallback cookies and close the browser.
+
+        Call ``twitter.quit()`` instead of ``twitter.browser.quit()`` so that
+        auth cookies are always persisted back to the real profile when a
+        fallback temp profile was used.
+        """
+        self._sync_fallback_cookies_to_real_profile()
+        try:
+            self.browser.quit()
+        except Exception:
+            pass
 
     def _do_post(self, text: Optional[str] = None) -> str:
         """
