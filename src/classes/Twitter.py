@@ -1405,6 +1405,69 @@ class Twitter:
 
         return (rank_map.get(likelihood, 9), attempts, timestamp_score)
 
+    def _reclassify_exhausted_recovery_posts(self) -> int:
+        """
+        Marks pending posts whose recovery has been exhausted so they no longer
+        block the readiness gate.
+
+        A post is considered recovery-exhausted when:
+        - It is still in 'pending' verification state (no confirmed URL)
+        - It is older than EXHAUSTED_AGE_HOURS
+        - It has had at least EXHAUSTED_MIN_ATTEMPTS failed verification attempts
+
+        Returns:
+            count (int): Number of posts reclassified
+        """
+        EXHAUSTED_AGE_HOURS = 20
+        EXHAUSTED_MIN_ATTEMPTS = 12
+
+        cache_path = get_twitter_cache_path()
+        try:
+            with open(cache_path, "r") as fh:
+                parsed = json.load(fh)
+        except Exception:
+            return 0
+
+        reclassified = 0
+        now = datetime.now()
+        for account in parsed.get("accounts", []):
+            if account.get("id") != self.account_uuid:
+                continue
+            for post in account.get("posts", []):
+                if bool(post.get("post_verified", False)):
+                    continue
+                if str(post.get("verification_state", "")).strip().lower() != "pending":
+                    continue
+                if str(post.get("publish_likelihood", "")).strip() == "recovery-exhausted":
+                    continue
+                attempts_raw = post.get("verification_attempts", 0)
+                try:
+                    attempts = int(attempts_raw)
+                except Exception:
+                    attempts = 0
+                if attempts < EXHAUSTED_MIN_ATTEMPTS:
+                    continue
+                created_at = self._parse_cached_post_datetime(str(post.get("date", "")))
+                if created_at is None:
+                    continue
+                age_hours = (now - created_at).total_seconds() / 3600.0
+                if age_hours < EXHAUSTED_AGE_HOURS:
+                    continue
+                post["publish_likelihood"] = "recovery-exhausted"
+                reclassified += 1
+            break
+
+        if reclassified > 0:
+            tmp = cache_path + ".tmp"
+            try:
+                with open(tmp, "w") as fh:
+                    json.dump(parsed, fh, indent=4)
+                os.replace(tmp, cache_path)
+            except Exception:
+                pass
+
+        return reclassified
+
     def verify_recent_cached_posts(self, limit: int = 3, backfill: bool = True, pending_only: bool = False) -> dict:
         """
         Verifies recent cached posts against the live account timeline.
@@ -1416,6 +1479,9 @@ class Twitter:
         Returns:
             result (dict): Verification summary
         """
+        # Reclassify any posts whose recovery is genuinely exhausted before
+        # selecting candidates so the priority sort and gate checks are accurate.
+        self._reclassify_exhausted_recovery_posts()
         cached_posts = self.get_posts()
         candidates = cached_posts
         if pending_only:
@@ -2884,6 +2950,8 @@ class Twitter:
 
         strong_starts = (
             "did you know",
+            "do you know",
+            "have you",
             "want to",
             "stop ",
             "try ",
@@ -2891,11 +2959,38 @@ class Twitter:
             "use ",
             "the fastest",
             "the easiest",
+            "the real",
+            "the secret",
             "most people",
+            "most of us",
             "your ",
             "why ",
             "what if",
+            "what most",
             "here's how",
+            "here's why",
+            "here's the",
+            "ever wonder",
+            "ever tried",
+            "ever notice",
+            "ever feel",
+            "if you",
+            "when you",
+            "how to",
+            "how many",
+            "imagine ",
+            "turns out",
+            "forget ",
+            "not all",
+            "not every",
+            "one of the",
+            "one thing",
+            "the one ",
+            "this is",
+            "you don't",
+            "you might",
+            "you can ",
+            "you're ",
         )
 
         if "?" in hook_text:
@@ -3367,8 +3462,19 @@ class Twitter:
         recent_openings = set(self._recent_opening_signatures(existing_posts))
         recent_hashtags = self._recent_hashtags(existing_posts)
         recent_cta_signatures = self._recent_cta_signatures(existing_posts)
-        recent_categories = self._recent_categories(existing_posts, limit=6)
-        recent_category_set = set(recent_categories)
+        recent_categories = self._recent_categories(existing_posts, limit=3)
+        # Only treat a category as "blocked" if it appears at least twice in
+        # the last 3 posts — one prior use is fine; back-to-back is not.
+        from collections import Counter as _Counter
+        _raw_cats = [
+            (
+                str(p.get("category", "")).strip().lower()
+                or self._infer_category_from_text(p.get("content", ""))
+            )
+            for p in existing_posts[-3:]
+        ]
+        _cat_counts = _Counter(_raw_cats)
+        recent_category_set = {cat for cat, cnt in _cat_counts.items() if cnt >= 2 and cat}
         category_pool = self._topic_category_pool()
         trusted_links = self._trusted_link_pool()
         trusted_sources = self._trusted_source_labels()
