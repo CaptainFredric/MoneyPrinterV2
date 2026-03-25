@@ -716,13 +716,13 @@ class Twitter:
         Returns:
             handle (str): Username without @, or empty string
         """
-        selectors = [
+        # Strategy 1: test-ID nav link (desktop sidebar — may be absent in headless/mobile layout)
+        testid_selectors = [
             (By.CSS_SELECTOR, "a[data-testid='AppTabBar_Profile_Link']"),
             (By.XPATH, "//a[contains(@href,'/') and contains(@href,'x.com/') and @data-testid='AppTabBar_Profile_Link']"),
             (By.XPATH, "//a[contains(@href,'/') and contains(@href,'twitter.com/') and @data-testid='AppTabBar_Profile_Link']"),
         ]
-
-        for selector in selectors:
+        for selector in testid_selectors:
             try:
                 elem = self.browser.find_element(*selector)
                 href = elem.get_attribute("href") or ""
@@ -732,11 +732,44 @@ class Twitter:
             except Exception:
                 continue
 
-        # Fallback probe: load home page and retry selectors once.
+        # Strategy 2: configured handle direct href (works when X removes test-IDs in headless mode)
+        configured = (self._configured_account_handle() or "").strip().lstrip("@")
+        if configured:
+            try:
+                sel = f"a[href*='/{configured}']"
+                elems = self.browser.find_elements(By.CSS_SELECTOR, sel)
+                for elem in elems:
+                    href = elem.get_attribute("href") or ""
+                    match = re.search(r"(?:x|twitter)\.com/([A-Za-z0-9_]+)$", href)
+                    if match and match.group(1).lower() == configured.lower():
+                        return match.group(1)
+            except Exception:
+                pass
+
+        # Strategy 3: scan ALL links on the page for a unique profile-looking href.
+        # Exclude known non-profile paths.
+        _SKIP = {"tos", "privacy", "home", "explore", "notifications", "messages",
+                 "settings", "search", "i", "support", "about"}
+        try:
+            all_links = self.browser.find_elements(By.CSS_SELECTOR, "a[href]")
+            for elem in all_links:
+                href = elem.get_attribute("href") or ""
+                match = re.search(r"(?:x|twitter)\.com/([A-Za-z0-9_]+)$", href)
+                if not match:
+                    continue
+                candidate = match.group(1)
+                if candidate.lower() in _SKIP:
+                    continue
+                if configured and candidate.lower() == configured.lower():
+                    return candidate
+        except Exception:
+            pass
+
+        # Strategy 4: load home and retry all strategies once.
         try:
             self.browser.get(self._home_url())
-            time.sleep(2)
-            for selector in selectors:
+            time.sleep(3)
+            for selector in testid_selectors:
                 try:
                     elem = self.browser.find_element(*selector)
                     href = elem.get_attribute("href") or ""
@@ -745,6 +778,16 @@ class Twitter:
                         return match.group(1)
                 except Exception:
                     continue
+            if configured:
+                try:
+                    elems = self.browser.find_elements(By.CSS_SELECTOR, f"a[href*='/{configured}']")
+                    for elem in elems:
+                        href = elem.get_attribute("href") or ""
+                        match = re.search(r"(?:x|twitter)\.com/([A-Za-z0-9_]+)$", href)
+                        if match and match.group(1).lower() == configured.lower():
+                            return match.group(1)
+                except Exception:
+                    pass
         except Exception:
             pass
 
