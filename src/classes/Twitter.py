@@ -365,7 +365,8 @@ class Twitter:
         for selector in post_button_selectors:
             try:
                 post_button = self.wait.until(EC.element_to_be_clickable(selector))
-                post_button.click()
+                # Use JS click — avoids headless intercept issues with overlapping elements
+                self.browser.execute_script("arguments[0].click();", post_button)
                 break
             except Exception:
                 continue
@@ -376,15 +377,40 @@ class Twitter:
         if verbose:
             print(colored(" => Pressed [ENTER] Button on Twitter..", "blue"))
 
-        # Wait for compose dialog to close — confirms X accepted the post
+        # Confirm compose dialog closed. On home timeline X always keeps ONE
+        # tweetTextarea_0 for the inline composer — the modal compose dialog adds
+        # a SECOND one plus an aria-modal=true element. We confirm success when
+        # the aria-modal overlay disappears (count drops to 0).
+        compose_confirmed = False
         try:
             self.wait.until(
                 EC.invisibility_of_element_located(
-                    (By.CSS_SELECTOR, "div[data-testid='tweetTextarea_0']")
+                    (By.CSS_SELECTOR, "[aria-modal='true']")
                 )
             )
+            compose_confirmed = True
         except Exception:
-            time.sleep(2)  # Non-fatal fallback
+            # Grace period — sometimes the modal is slow to dismiss
+            time.sleep(3)
+            try:
+                modal_elements = self.browser.find_elements(
+                    By.CSS_SELECTOR, "[aria-modal='true']"
+                )
+                compose_confirmed = len(modal_elements) == 0
+            except Exception:
+                compose_confirmed = False
+
+        if not compose_confirmed:
+            warning(
+                "X compose dialog did not close after Post click — "
+                "X likely rejected or rate-limited this post. NOT saving to cache."
+            )
+            self._log_transaction('post_attempt', 'failed', {
+                'reason': 'compose-not-confirmed',
+                'text_snippet': body[:80],
+                'attempt_time': now.isoformat()
+            })
+            return "failed:compose-not-confirmed"
 
         post_urls = self._extract_urls(body)
         post_category = self._infer_category_from_text(body)
@@ -1203,8 +1229,14 @@ class Twitter:
             posts (list[dict]): Timeline post previews with text and URL
         """
         self.browser.get(self._timeline_url_for_handle(handle))
-        time.sleep(3)
-        return self._collect_timeline_posts_from_current_page(limit=limit)
+        # X uses React lazy-loading; wait for article elements to render.
+        time.sleep(5)
+        posts = self._collect_timeline_posts_from_current_page(limit=limit)
+        if not posts:
+            # One retry for slow connections or brief rate-limit pauses
+            time.sleep(4)
+            posts = self._collect_timeline_posts_from_current_page(limit=limit)
+        return posts
 
     def _collect_timeline_posts_from_current_page(self, limit: int = 5) -> list[dict]:
         """

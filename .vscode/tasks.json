@@ -1,0 +1,120 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Twitter: Smart Post (Headless)",
+            "type": "shell",
+            "command": "${workspaceFolder}/.runtime-venv/bin/python",
+            "args": [
+                "${workspaceFolder}/scripts/smart_post_twitter.py",
+                "--headless"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}",
+                "env": {
+                    "MPV2_HEADLESS": "1"
+                }
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Twitter: Readiness Report",
+            "type": "shell",
+            "command": "${workspaceFolder}/.runtime-venv/bin/python",
+            "args": [
+                "${workspaceFolder}/scripts/twitter_readiness_report.py"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}",
+                "env": {
+                    "MPV2_HEADLESS": "1"
+                }
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Twitter: Backfill niche_launch_1",
+            "type": "shell",
+            "command": "${workspaceFolder}/.runtime-venv/bin/python",
+            "args": [
+                "${workspaceFolder}/scripts/backfill_pending_twitter.py",
+                "--headless",
+                "niche_launch_1"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}",
+                "env": {
+                    "MPV2_HEADLESS": "1"
+                }
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Twitter: Backfill EyeCatcher",
+            "type": "shell",
+            "command": "${workspaceFolder}/.runtime-venv/bin/python",
+            "args": [
+                "${workspaceFolder}/scripts/backfill_pending_twitter.py",
+                "--headless",
+                "EyeCatcher"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}",
+                "env": {
+                    "MPV2_HEADLESS": "1"
+                }
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Twitter: Verify Phase3 niche_launch_1",
+            "type": "shell",
+            "command": "${workspaceFolder}/.runtime-venv/bin/python",
+            "args": [
+                "${workspaceFolder}/scripts/verify_twitter_posts_phase3.py",
+                "niche_launch_1",
+                "--headless"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}",
+                "env": {
+                    "MPV2_HEADLESS": "1"
+                }
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Twitter: Verify Phase3 EyeCatcher",
+            "type": "shell",
+            "command": "${workspaceFolder}/.runtime-venv/bin/python",
+            "args": [
+                "${workspaceFolder}/scripts/verify_twitter_posts_phase3.py",
+                "EyeCatcher",
+                "--headless"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}",
+                "env": {
+                    "MPV2_HEADLESS": "1"
+                }
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "Twitter: Session Restore (All)",
+            "type": "shell",
+            "command": "${workspaceFolder}/.runtime-venv/bin/python",
+            "args": [
+                "${workspaceFolder}/scripts/session_restore.py",
+                "all"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}",
+                "env": {
+                    "MPV2_HEADLESS": "1"
+                }
+            },
+            "problemMatcher": []
+        }
+    ]
+}
