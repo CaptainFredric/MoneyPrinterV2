@@ -575,5 +575,15 @@
     "using_fallback_profile": true,
     "reason": "cooldown:24m",
     "attempt_time": "2026-03-25T00:50:34.256704"
+  },
+  {
+    "timestamp": "2026-03-25T00:54:05.824140",
+    "account_uuid": "6f4f6c1a-2b4d-4dc9-9e8e-7d0e4f5c1a21",
+    "account_nickname": "niche_launch_1",
+    "action": "post_attempt",
+    "status": "skipped",
+    "using_fallback_profile": true,
+    "reason": "cooldown:21m",
+    "attempt_time": "2026-03-25T00:54:05.794600"
   }
 ]
