@@ -39,6 +39,7 @@ VERIFY_SCRIPT = ROOT_DIR / "scripts" / "verify_twitter_posts.py"
 BACKFILL_SCRIPT = ROOT_DIR / "scripts" / "backfill_pending_twitter.py"
 SESSION_SCRIPT = ROOT_DIR / "scripts" / "check_x_session.py"
 CLEANUP_SCRIPT = ROOT_DIR / "scripts" / "cleanup_stale_locks.py"
+TEMP_CLEANUP_SCRIPT = ROOT_DIR / "scripts" / "cleanup_temp_space.py"
 
 RUNTIME_DIR = ROOT_DIR / ".mp" / "runtime"
 PID_FILE = RUNTIME_DIR / "money_idle.pid"
@@ -173,6 +174,12 @@ def main() -> None:
     parser.add_argument("--verify-every", type=int, default=3, help="run verify/backfill every N cycles when no qualified post")
     parser.add_argument("--confidence-min-score", type=int, default=int(os.environ.get("MPV2_CONFIDENCE_MIN_SCORE", "80")))
     parser.add_argument("--fast-retry-minutes", type=int, default=4, help="short retry sleep when post confidence is below threshold")
+    parser.add_argument(
+        "--smart-timeout-seconds",
+        type=int,
+        default=int(os.environ.get("MPV2_IDLE_SMART_TIMEOUT_SECONDS", "900")),
+        help="timeout for smart posting subprocess",
+    )
     parser.add_argument("--once", action="store_true", help="run one cycle and exit")
     args = parser.parse_args()
 
@@ -194,6 +201,8 @@ def main() -> None:
     env = os.environ.copy()
     if args.headless:
         env["MPV2_HEADLESS"] = "1"
+    env["MPV2_SMART_TIMEOUT_SECONDS"] = str(args.smart_timeout_seconds)
+    env["MPV2_CONFIDENCE_MIN_SCORE"] = str(args.confidence_min_score)
 
     cycle_index = 0
 
@@ -220,7 +229,7 @@ def main() -> None:
                 "--only-account",
                 args.primary_account,
             ]
-            smart_result = _run_cmd(smart_cmd, env)
+            smart_result = _run_cmd(smart_cmd, env, timeout_seconds=args.smart_timeout_seconds)
             smart_output = f"{smart_result.stdout}\n{smart_result.stderr}"
             posted_count = _parse_posted_count(smart_output)
             post_status = _parse_post_status(smart_output)
@@ -248,6 +257,8 @@ def main() -> None:
             if args.cleanup_every > 0 and cycle_index % args.cleanup_every == 0:
                 cleanup_cmd = [str(VENV_PYTHON), str(CLEANUP_SCRIPT)]
                 _run_cmd(cleanup_cmd, env)
+                temp_cleanup_cmd = [str(VENV_PYTHON), str(TEMP_CLEANUP_SCRIPT)]
+                _run_cmd(temp_cleanup_cmd, env)
 
             if args.session_check_every > 0 and cycle_index % args.session_check_every == 0:
                 session_cmd = [str(VENV_PYTHON), str(SESSION_SCRIPT), "all"]

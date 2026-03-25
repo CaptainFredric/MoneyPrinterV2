@@ -45,6 +45,7 @@ VERIFY_SCRIPT_PHASE3 = ROOT_DIR / "scripts" / "verify_twitter_posts_phase3.py"
 BACKFILL_SCRIPT = ROOT_DIR / "scripts" / "backfill_pending_twitter.py"
 SESSION_SCRIPT = ROOT_DIR / "scripts" / "check_x_session.py"
 CLEANUP_SCRIPT = ROOT_DIR / "scripts" / "cleanup_stale_locks.py"
+TEMP_CLEANUP_SCRIPT = ROOT_DIR / "scripts" / "cleanup_temp_space.py"
 
 RUNTIME_DIR = ROOT_DIR / ".mp" / "runtime"
 ACCOUNT_STATE_FILE = RUNTIME_DIR / "account_states.json"
@@ -214,6 +215,8 @@ def main() -> None:
     env = os.environ.copy()
     if args.headless:
         env["MPV2_HEADLESS"] = "1"
+    env["MPV2_SMART_TIMEOUT_SECONDS"] = str(args.smart_timeout_seconds)
+    env["MPV2_CONFIDENCE_MIN_SCORE"] = str(args.confidence_min_score)
 
     cycle_index = 0
 
@@ -304,6 +307,8 @@ def main() -> None:
             if args.cleanup_every > 0 and cycle_index % args.cleanup_every == 0:
                 cleanup_cmd = [str(VENV_PYTHON), str(CLEANUP_SCRIPT)]
                 _run_cmd(cleanup_cmd, env)
+                temp_cleanup_cmd = [str(VENV_PYTHON), str(TEMP_CLEANUP_SCRIPT)]
+                _run_cmd(temp_cleanup_cmd, env)
 
             if args.session_check_every > 0 and cycle_index % args.session_check_every == 0:
                 session_cmd = [str(VENV_PYTHON), str(SESSION_SCRIPT), "all"]
