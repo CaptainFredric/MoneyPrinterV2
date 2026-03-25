@@ -16,6 +16,7 @@ import argparse
 import json
 import os
 import sys
+import time
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -97,6 +98,8 @@ def main() -> None:
     parser.add_argument("identifier", help="nickname, uuid, or 'all'")
     parser.add_argument("--limit", type=int, default=20, help="pending posts to inspect per account")
     parser.add_argument("--headless", action="store_true", help="run headless")
+    parser.add_argument("--passes", type=int, default=1, help="backfill passes to run per account")
+    parser.add_argument("--pass-delay-seconds", type=int, default=0, help="seconds to wait between backfill passes")
     args = parser.parse_args()
 
     if args.headless:
@@ -112,7 +115,16 @@ def main() -> None:
     failures = 0
 
     for account in accounts:
-        result = _run_backfill_for_account(account, max(args.limit, 1))
+        result = {}
+        passes = max(1, int(args.passes or 1))
+        pass_delay_seconds = max(0, int(args.pass_delay_seconds or 0))
+        for pass_index in range(passes):
+            result = _run_backfill_for_account(account, max(args.limit, 1))
+            if result.get("verified_count", 0) > 0 or pass_index >= passes - 1:
+                break
+            if pass_delay_seconds > 0:
+                print(f"⏳ Waiting {pass_delay_seconds}s before backfill pass {pass_index + 2}/{passes}...")
+                time.sleep(pass_delay_seconds)
         _print_result(result)
         total_checked += result.get("checked_count", 0)
         total_verified += result.get("verified_count", 0)
