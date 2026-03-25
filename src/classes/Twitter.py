@@ -69,6 +69,7 @@ class Twitter:
         self.session_health_check_cache: Optional[dict] = None
         self.last_cooldown_warning_time: Optional[datetime] = None
         self.last_permalink_debug: dict = {}
+        self._visibility_issue_cached: Optional[bool] = None
 
 
         # Initialize the Firefox profile
@@ -682,18 +683,32 @@ class Twitter:
         Returns:
             has_issue (bool): Whether authored posts are unavailable live
         """
+        # Return cached result so we don't navigate away from home on every check_session call.
+        if self._visibility_issue_cached is not None:
+            return self._visibility_issue_cached
+
         cached_posts = self.get_posts()
         if not handle or not cached_posts:
+            self._visibility_issue_cached = False
+            return False
+
+        # Skip expensive check for accounts that have never had a verified post —
+        # they haven't proven visibility yet so the check adds noise, not signal.
+        verified_count = sum(1 for p in cached_posts if p.get("post_verified"))
+        if verified_count == 0:
+            self._visibility_issue_cached = False
             return False
 
         try:
             self.browser.get(self._timeline_url_for_handle(handle))
             time.sleep(3)
             if self._is_x_error_page():
+                self._visibility_issue_cached = False
                 return False
 
             live_posts = self._collect_timeline_posts_from_current_page(limit=5)
             if live_posts:
+                self._visibility_issue_cached = False
                 return False
 
             body_text = ""
@@ -703,10 +718,13 @@ class Twitter:
                 body_text = ""
 
             if re.search(r"\b0\s+posts\b", body_text.lower()):
+                self._visibility_issue_cached = True
                 return True
         except Exception:
+            self._visibility_issue_cached = False
             return False
 
+        self._visibility_issue_cached = False
         return False
 
     def _resolve_account_handle(self) -> str:
