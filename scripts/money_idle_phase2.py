@@ -35,6 +35,7 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT_DIR / "src"))
 
 from account_state_machine import AccountStateMachine
+from account_performance import recovery_mode_decision
 from runtime_python import resolve_runtime_python
 
 VENV_PYTHON = Path(resolve_runtime_python())
@@ -254,26 +255,49 @@ def main() -> None:
                 }
             )
 
-            # Run smart post on selected account
-            smart_cmd = [
-                str(VENV_PYTHON),
-                str(SMART_SCRIPT),
-                "--headless",
-                "--allow-no-post",
-                "--only-account",
-                best_account,
-            ]
-            smart_result = _run_cmd(smart_cmd, env, timeout_seconds=args.smart_timeout_seconds)
-            smart_output = f"{smart_result.stdout}\n{smart_result.stderr}"
-            posted_count = _parse_posted_count(smart_output)
-            post_status = _parse_post_status(smart_output)
-            confidence_score, confidence_level = _parse_confidence(post_status)
-            pending_verification_post = post_status.startswith("posted:pending-verification")
-            qualified_post = (
-                posted_count > 0
-                and confidence_score >= args.confidence_min_score
-                and (not confidence_level or confidence_level in {"high", "verified"})
-            )
+            recovery_decision = recovery_mode_decision(best_account, cycle_index)
+            recovery_mode = bool(recovery_decision.get("use_recovery_mode", False))
+            if recovery_mode:
+                print(
+                    "[idle-p2] Recovery mode for "
+                    f"{best_account}: pending={recovery_decision['pending']} verified={recovery_decision['verified']} "
+                    f"(full post every {recovery_decision['post_every_cycles']} cycles)."
+                )
+
+            posted_count = 0
+            post_status = "skipped:recovery-mode"
+            confidence_score = -1
+            confidence_level = ""
+            pending_verification_post = False
+            qualified_post = False
+            smart_result = CmdResult(code=0, stdout="", stderr="")
+            smart_output = ""
+            cooldown_minutes = 0
+
+            if not recovery_mode:
+                # Run smart post on selected account
+                smart_cmd = [
+                    str(VENV_PYTHON),
+                    str(SMART_SCRIPT),
+                    "--headless",
+                    "--allow-no-post",
+                    "--only-account",
+                    best_account,
+                ]
+                smart_result = _run_cmd(smart_cmd, env, timeout_seconds=args.smart_timeout_seconds)
+                smart_output = f"{smart_result.stdout}\n{smart_result.stderr}"
+                posted_count = _parse_posted_count(smart_output)
+                post_status = _parse_post_status(smart_output)
+                confidence_score, confidence_level = _parse_confidence(post_status)
+                pending_verification_post = post_status.startswith("posted:pending-verification")
+                qualified_post = (
+                    posted_count > 0
+                    and confidence_score >= args.confidence_min_score
+                    and (not confidence_level or confidence_level in {"high", "verified"})
+                )
+                cooldown_minutes = _parse_cooldown_minutes(smart_output)
+            else:
+                print(f"[idle-p2] Skipping full smart post for {best_account}; prioritizing recovery verify/backfill.")
 
             # Record post result and update account state
             state_machine.record_post(best_account, post_status, confidence_score)
@@ -281,10 +305,9 @@ def main() -> None:
             print(f"[idle-p2] Account {best_account} transitioned to: {updated_state['state']}")
             print(f"[idle-p2] Account health score: {updated_state['health_score']}")
 
-            cooldown_minutes = _parse_cooldown_minutes(smart_output)
-
             # Run verify/backfill if qualified, or if X accepted the compose but permalink resolution lagged.
             run_verify_backfill = (
+                recovery_mode
                 qualified_post
                 or pending_verification_post
                 or (args.verify_every > 0 and cycle_index % args.verify_every == 0)
@@ -293,15 +316,17 @@ def main() -> None:
             verify_result = CmdResult(code=0, stdout="", stderr="")
             backfill_result = CmdResult(code=0, stdout="", stderr="")
             if run_verify_backfill:
-                if pending_verification_post:
+                if recovery_mode:
+                    print("[idle-p2] Recovery mode detected; running verify/backfill-first pass.")
+                elif pending_verification_post:
                     print("[idle-p2] Pending verification detected; running immediate verify/backfill follow-through.")
                 verify_cmd = [str(VENV_PYTHON), str(VERIFY_SCRIPT_PHASE3 if args.use_phase3 else VERIFY_SCRIPT), best_account]
-                if args.use_phase3 and pending_verification_post:
+                if args.use_phase3 and (pending_verification_post or recovery_mode):
                     verify_cmd.extend(["--limit", "8", "--passes", "3", "--pass-delay-seconds", "20", "--pending-only", "--headless"])
                 verify_result = _run_cmd(verify_cmd, env)
 
                 backfill_cmd = [str(VENV_PYTHON), str(BACKFILL_SCRIPT), best_account, "--headless"]
-                if pending_verification_post:
+                if pending_verification_post or recovery_mode:
                     backfill_cmd.extend(["--limit", "20", "--passes", "3", "--pass-delay-seconds", "20"])
                 backfill_result = _run_cmd(backfill_cmd, env)
             else:
@@ -347,6 +372,7 @@ def main() -> None:
                 "started_at": cycle_started_at,
                 "finished_at": cycle_finished_at,
                 "selected_account": best_account,
+                "recovery_mode": recovery_mode,
                 "posted_count": posted_count,
                 "post_status": post_status,
                 "confidence_score": confidence_score,
