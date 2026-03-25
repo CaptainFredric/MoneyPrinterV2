@@ -358,6 +358,7 @@ class Twitter:
                 {
                     "content": body,
                     "date": now.strftime("%m/%d/%Y, %H:%M:%S"),
+                    "pending_since": now.isoformat(timespec="seconds"),
                     "category": post_category,
                     "format": resolved_format,
                     "citation_source": citation_source,
@@ -365,13 +366,15 @@ class Twitter:
                     "tweet_url": "",
                     "post_verified": False,
                     "verification_state": "pending",
+                    "verification_attempts": 0,
+                    "last_verification_checked_at": "",
                     "confidence_score": confidence_payload["score"],
                     "confidence_level": confidence_payload["level"],
                     "confidence_signals": confidence_payload["signals"],
                 }
             )
             self._record_angle_signature(angle_signature, post_category)
-            phase3_result = self._verify_latest_post_phase3()
+            phase3_result = self._verify_latest_post_phase3(attempts=3, retry_delay_seconds=12)
             self._log_transaction('post_attempt', 'pending', {
                 'reason': 'unverified',
                 'text_snippet': body[:80],
@@ -413,7 +416,7 @@ class Twitter:
         )
 
         self._record_angle_signature(angle_signature, post_category)
-        phase3_result = self._verify_latest_post_phase3()
+        phase3_result = self._verify_latest_post_phase3(attempts=3, retry_delay_seconds=12)
 
         self._log_transaction('post_attempt', 'success', {
             'text_snippet': body[:80],
@@ -1179,6 +1182,7 @@ class Twitter:
                     cached_post["last_verification_checked_at"] = datetime.now().isoformat(timespec="seconds")
                     cached_post["verification_attempts"] = 0 if verified else attempts + 1
                     if verified:
+                        cached_post["verified_at"] = datetime.now().isoformat(timespec="seconds")
                         cached_post["confidence_score"] = 100
                         cached_post["confidence_level"] = "verified"
                     else:
@@ -1314,10 +1318,10 @@ class Twitter:
             except Exception:
                 age_hours = None
 
-        recent_enough = age_hours is None or age_hours <= 12
+        recent_enough = age_hours is None or age_hours <= 36
         high_likelihood = compose_accepted or existing_tweet_url or confidence_score >= 80
 
-        under_retry_cap = verification_attempts < 3
+        under_retry_cap = verification_attempts < 8
         return recent_enough and high_likelihood and under_retry_cap
 
     def verify_recent_cached_posts(self, limit: int = 3, backfill: bool = True, pending_only: bool = False) -> dict:

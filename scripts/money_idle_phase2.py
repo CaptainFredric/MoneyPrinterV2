@@ -296,9 +296,13 @@ def main() -> None:
                 if pending_verification_post:
                     print("[idle-p2] Pending verification detected; running immediate verify/backfill follow-through.")
                 verify_cmd = [str(VENV_PYTHON), str(VERIFY_SCRIPT_PHASE3 if args.use_phase3 else VERIFY_SCRIPT), best_account]
+                if args.use_phase3 and pending_verification_post:
+                    verify_cmd.extend(["--limit", "8", "--passes", "3", "--pass-delay-seconds", "20", "--pending-only", "--headless"])
                 verify_result = _run_cmd(verify_cmd, env)
 
                 backfill_cmd = [str(VENV_PYTHON), str(BACKFILL_SCRIPT), best_account, "--headless"]
+                if pending_verification_post:
+                    backfill_cmd.extend(["--limit", "20", "--passes", "3", "--pass-delay-seconds", "20"])
                 backfill_result = _run_cmd(backfill_cmd, env)
             else:
                 print("[idle-p2] Skipping verify/backfill this cycle (no qualified post, non-maintenance cycle).")

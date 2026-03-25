@@ -16,6 +16,7 @@ Usage:
 import argparse
 import json
 import sys
+import time
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -52,7 +53,7 @@ def _resolve_accounts(identifier: str) -> list[dict]:
     return matches
 
 
-def _verify_account_phase3(account: dict, limit: int) -> tuple[bool, dict]:
+def _verify_account_phase3(account: dict, limit: int, pending_only: bool = False) -> tuple[bool, dict]:
     """Verify account using Phase 3 enhanced matching."""
     twitter = Twitter(
         account["id"],
@@ -62,7 +63,7 @@ def _verify_account_phase3(account: dict, limit: int) -> tuple[bool, dict]:
         account.get("browser_binary", ""),
     )
     try:
-        result = twitter.verify_recent_cached_posts(limit=limit, backfill=True)
+        result = twitter.verify_recent_cached_posts(limit=limit, backfill=True, pending_only=pending_only)
         
         # Enhance result with Phase 3 metrics
         result["phase3_enabled"] = True
@@ -116,6 +117,9 @@ def main() -> None:
     parser.add_argument("identifier", help="nickname, uuid, or 'all'")
     parser.add_argument("--limit", type=int, default=5, help="recent cached posts to verify per account")
     parser.add_argument("--headless", action="store_true", help="run browser headless for verification")
+    parser.add_argument("--passes", type=int, default=1, help="verification passes to run per account")
+    parser.add_argument("--pass-delay-seconds", type=int, default=0, help="seconds to wait between verification passes")
+    parser.add_argument("--pending-only", action="store_true", help="verify only pending or unverified cached posts")
     args = parser.parse_args()
 
     if args.headless:
@@ -133,7 +137,21 @@ def main() -> None:
     print(f"\n🔍 Phase 3 Enhanced Verification (Limit: {args.limit} posts/account)\n")
     
     for account in accounts:
-        ok, result = _verify_account_phase3(account, limit=max(args.limit, 1))
+        result = {}
+        ok = False
+        passes = max(1, int(args.passes or 1))
+        pass_delay_seconds = max(0, int(args.pass_delay_seconds or 0))
+        for pass_index in range(passes):
+            ok, result = _verify_account_phase3(
+                account,
+                limit=max(args.limit, 1),
+                pending_only=args.pending_only,
+            )
+            if ok or pass_index >= passes - 1:
+                break
+            if pass_delay_seconds > 0:
+                print(f"⏳ Waiting {pass_delay_seconds}s before Phase 3 retry pass {pass_index + 2}/{passes}...")
+                time.sleep(pass_delay_seconds)
         _print_result_phase3(result)
         total_verified += result.get("verified_count", 0)
         if result.get("error"):
