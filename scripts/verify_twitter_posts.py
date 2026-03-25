@@ -62,7 +62,7 @@ def _verify_account(account: dict, limit: int) -> tuple[bool, dict]:
         return result.get("verified_count", 0) > 0, result
     finally:
         try:
-            twitter.browser.quit()
+            twitter.quit()
         except Exception:
             pass
 

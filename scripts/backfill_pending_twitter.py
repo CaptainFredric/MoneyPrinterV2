@@ -72,7 +72,7 @@ def _run_backfill_for_account(account: dict, limit: int) -> dict:
             return twitter.verify_pending_cached_posts(limit=limit, backfill=True)
         finally:
             try:
-                twitter.browser.quit()
+                twitter.quit()
             except Exception:
                 pass
     finally:

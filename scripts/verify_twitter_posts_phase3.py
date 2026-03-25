@@ -76,7 +76,7 @@ def _verify_account_phase3(account: dict, limit: int, pending_only: bool = False
         return result.get("verified_count", 0) > 0, result
     finally:
         try:
-            twitter.browser.quit()
+            twitter.quit()
         except Exception:
             pass
 
