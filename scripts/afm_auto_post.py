@@ -10,11 +10,15 @@ import argparse
 import json
 import os
 import time
+import sys
 from pathlib import Path
 from urllib.parse import urlparse, urlunparse, parse_qsl, urlencode
 
 ROOT = Path(__file__).resolve().parent.parent
 TWITTER_CACHE = ROOT / ".mp" / "twitter.json"
+SRC_DIR = ROOT / 'src'
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
 
 
 def add_utm(url: str, params: dict) -> str:
@@ -58,6 +62,14 @@ def main():
         print('No affiliate links found in', args.links_file)
         return
 
+    # allow a small affiliate helper import from scripts/
+    import sys as _sys
+    _sys.path.insert(0, str(ROOT / 'scripts'))
+    try:
+        import affiliate_utils as _affiliate_utils
+    except Exception:
+        _affiliate_utils = None
+
     accounts = load_accounts()
     selected = []
     if args.account.lower() == 'all':
@@ -72,9 +84,24 @@ def main():
         print('No matching accounts found for', args.account)
         return
 
-    # Lazy imports (avoid startup cost if dry-run and not used)
-    from src.classes.AFM import AffiliateMarketing
-    from src.classes.Twitter import Twitter
+    # Import classes using package-style import so relative imports inside
+    # the modules (e.g. `from .Twitter import Twitter`) work correctly.
+    import importlib
+    AffiliateMarketing = None
+    Twitter = None
+    try:
+        # Ensure `src` is on sys.path (set at top of this script)
+        mod_afm = importlib.import_module('classes.AFM')
+        AffiliateMarketing = getattr(mod_afm, 'AffiliateMarketing', None)
+    except Exception as e:
+        print('AFM import error:', e)
+        AffiliateMarketing = None
+    try:
+        mod_tw = importlib.import_module('classes.Twitter')
+        Twitter = getattr(mod_tw, 'Twitter', None)
+    except Exception as e:
+        print('Twitter import error:', e)
+        Twitter = None
 
     posted = 0
     for account in selected:
@@ -88,8 +115,37 @@ def main():
             try:
                 afm = AffiliateMarketing(link, profile, account.get('id'), nickname, topic)
                 pitch = afm.generate_pitch()
-                # use UTM'd link for sharing
-                utm_link = add_utm(link, {
+
+                # figure affiliate tag (config.json or env)
+                affiliate_tag = None
+                try:
+                    cfg_path = ROOT / 'config.json'
+                    if cfg_path.exists():
+                        cfg = json.loads(cfg_path.read_text(encoding='utf-8'))
+                        affiliate_tag = cfg.get('affiliate_tag') or cfg.get('amazon_affiliate_tag') or os.environ.get('MPV2_AFFILIATE_TAG')
+                except Exception:
+                    affiliate_tag = os.environ.get('MPV2_AFFILIATE_TAG')
+
+                # prefer affiliate_utils when available (adds 'tag' param only for amazon domains)
+                aff_link = link
+                if affiliate_tag:
+                    if _affiliate_utils:
+                        try:
+                            aff_link = _affiliate_utils.add_affiliate_tag(link, affiliate_tag)
+                        except Exception:
+                            aff_link = link
+                    else:
+                        # fallback: naïvely append tag param if missing
+                        from urllib.parse import urlparse, parse_qsl, urlencode, urlunparse
+                        p = urlparse(link)
+                        q = dict(parse_qsl(p.query, keep_blank_values=True))
+                        if 'tag' not in q:
+                            q['tag'] = affiliate_tag
+                            new_q = urlencode(q, doseq=True)
+                            aff_link = urlunparse((p.scheme, p.netloc, p.path, p.params, new_q, p.fragment))
+
+                # Attach UTM params (after affiliate tag so both exist)
+                utm_link = add_utm(aff_link, {
                     'utm_source': 'twitter',
                     'utm_medium': 'social',
                     'utm_campaign': f'mpv2_{nickname.lower()}'
