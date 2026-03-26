@@ -140,12 +140,21 @@ class AccountStateMachine:
 
         # Update failure state
         elif post_status.startswith("failed") or post_status.startswith("error"):
-            state["consecutive_failures"] += 1
-            state["health_score"] = max(20, state["health_score"] - 15)
+            # Session/login failures are an operator issue, not account quality.
+            # Don't penalise health or advance failure counter for them.
+            session_failure = any(
+                tag in post_status
+                for tag in ("login-required", "session-not-ready", "sessionnotcreated", "profile-not-found")
+            )
+            if session_failure:
+                print(f"[state-machine] Session failure detected for {account} — skipping health penalty.")
+            else:
+                state["consecutive_failures"] += 1
+                state["health_score"] = max(20, state["health_score"] - 15)
 
-            if state["consecutive_failures"] >= 2:
-                # Move to degraded after 2 consecutive failures
-                self.transition_to_degraded(account)
+                if state["consecutive_failures"] >= 2:
+                    # Move to degraded after 2 consecutive non-session failures
+                    self.transition_to_degraded(account)
             state["consecutive_low_confidence"] = 0
 
         # Reset consecutive counters on success/skip

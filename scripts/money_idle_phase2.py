@@ -149,8 +149,16 @@ def _parse_cooldown_minutes(output: str) -> int:
 def _save_state(payload: dict) -> None:
     RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
     temp_path = STATE_FILE.with_suffix(".tmp")
-    temp_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    temp_path.replace(STATE_FILE)
+    try:
+        temp_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        temp_path.replace(STATE_FILE)
+    except OSError as exc:
+        # Disk-full or permission error — don't crash the daemon, just warn
+        print(f"[idle-p2] WARNING: could not persist state ({exc}). Continuing.")
+        try:
+            temp_path.unlink(missing_ok=True)
+        except Exception:
+            pass
 
 
 def _write_pid() -> None:
@@ -308,7 +316,7 @@ def main() -> None:
             # Run verify/backfill if qualified, or if X accepted the compose but permalink resolution lagged.
             run_verify_backfill = (
                 recovery_mode
-                qualified_post
+                or qualified_post
                 or pending_verification_post
                 or (args.verify_every > 0 and cycle_index % args.verify_every == 0)
             )
