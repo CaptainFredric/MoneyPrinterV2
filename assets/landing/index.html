@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>MPV2 Lead Capture</title>
+    <style>
+      body{font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial;max-width:720px;margin:40px auto;padding:0 16px}
+      .card{border:1px solid #eee;padding:20px;border-radius:8px}
+      input[type=email]{width:100%;padding:8px;margin:8px 0}
+      button{padding:10px 14px}
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Join our list</h1>
+      <p>Leave your email and we'll send a short guide.</p>
+      <form method="post" action="/submit">
+        <input type="email" name="email" placeholder="you@example.com" required />
+        <input type="hidden" name="utm" value="" id="utm">
+        <div>
+          <button type="submit">Subscribe</button>
+        </div>
+      </form>
+    </div>
+    <script>
+      // populate utm if present in querystring
+      const urlParams = new URLSearchParams(window.location.search);
+      const utm = urlParams.get('utm') || '';
+      document.getElementById('utm').value = utm;
+    </script>
+  </body>
+</html>

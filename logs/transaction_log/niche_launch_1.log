@@ -762,5 +762,21 @@
     "using_fallback_profile": false,
     "reason": "cooldown:21m",
     "attempt_time": "2026-03-25T14:40:30.070781"
+  },
+  {
+    "timestamp": "2026-03-25T22:00:36.253912",
+    "account_uuid": "6f4f6c1a-2b4d-4dc9-9e8e-7d0e4f5c1a21",
+    "account_nickname": "niche_launch_1",
+    "action": "post_attempt",
+    "status": "success",
+    "using_fallback_profile": false,
+    "text_snippet": "Did you know that the '2-minute rule' can supercharge your productivity? If a ta",
+    "tweet_url": "https://x.com/NicheNewton/status/2037001716445405621",
+    "category": "focus",
+    "confidence_score": 93,
+    "confidence_level": "high",
+    "phase3_verified": true,
+    "phase3_match_method": "permalink-url",
+    "attempt_time": "2026-03-25T22:00:19.654176"
   }
 ]

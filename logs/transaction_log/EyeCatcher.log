@@ -706,5 +706,51 @@
     "using_fallback_profile": false,
     "reason": "cooldown:22m",
     "attempt_time": "2026-03-25T14:40:03.462005"
+  },
+  {
+    "timestamp": "2026-03-25T21:56:21.335408",
+    "account_uuid": "8d11dbfb-cdd8-4db7-9830-8ee115748e52",
+    "account_nickname": "EyeCatcher",
+    "action": "post_attempt",
+    "status": "success",
+    "using_fallback_profile": false,
+    "text_snippet": "Did you know that your sense of taste is linked to emotional memories? Research ",
+    "tweet_url": "https://x.com/EyeCaughtThat2/status/2037000648982483424",
+    "category": "food",
+    "confidence_score": 93,
+    "confidence_level": "high",
+    "phase3_verified": true,
+    "phase3_match_method": "permalink-url",
+    "attempt_time": "2026-03-25T21:56:08.835313"
+  },
+  {
+    "timestamp": "2026-03-25T21:56:48.773875",
+    "account_uuid": "8d11dbfb-cdd8-4db7-9830-8ee115748e52",
+    "account_nickname": "EyeCatcher",
+    "action": "post_attempt",
+    "status": "skipped",
+    "using_fallback_profile": false,
+    "reason": "cooldown:29m",
+    "attempt_time": "2026-03-25T21:56:48.767841"
+  },
+  {
+    "timestamp": "2026-03-25T22:04:01.356980",
+    "account_uuid": "8d11dbfb-cdd8-4db7-9830-8ee115748e52",
+    "account_nickname": "EyeCatcher",
+    "action": "post_attempt",
+    "status": "skipped",
+    "using_fallback_profile": false,
+    "reason": "cooldown:22m",
+    "attempt_time": "2026-03-25T22:04:01.327625"
+  },
+  {
+    "timestamp": "2026-03-25T22:05:48.367478",
+    "account_uuid": "8d11dbfb-cdd8-4db7-9830-8ee115748e52",
+    "account_nickname": "EyeCatcher",
+    "action": "post_attempt",
+    "status": "skipped",
+    "using_fallback_profile": false,
+    "reason": "cooldown:20m",
+    "attempt_time": "2026-03-25T22:05:48.324033"
   }
 ]
