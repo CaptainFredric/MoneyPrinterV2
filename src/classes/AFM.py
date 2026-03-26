@@ -12,6 +12,7 @@ from llm_provider import generate_text
 from .Twitter import Twitter
 from selenium import webdriver
 from selenium.common.exceptions import WebDriverException
+import traceback
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.firefox.options import Options
@@ -85,7 +86,16 @@ class AffiliateMarketing:
             self.browser: webdriver.Firefox = webdriver.Firefox(
                 service=self.service, options=self.options
             )
-        except WebDriverException:
+        except Exception:
+            # Catch any exception from browser startup (timeouts, RPC errors, etc.)
+            # and fall back to a cloned profile — some profile issues manifest
+            # as connection/timeouts rather than WebDriverException.
+            try:
+                raise
+            except Exception as init_exc:
+                print(f"[AFM] Browser init error, will attempt fallback clone: {init_exc}")
+                traceback.print_exc()
+            # proceed to fallback
             fallback_profile_path = tempfile.mkdtemp(prefix="mpv2_afm_ff_profile_")
             shutil.copytree(fp_profile_path, fallback_profile_path, dirs_exist_ok=True)
             for lock_file_name in [".parentlock", "parent.lock", "lock"]:
@@ -103,7 +113,24 @@ class AffiliateMarketing:
             fallback_options.add_argument("-profile")
             fallback_options.add_argument(fallback_profile_path)
             self.options = fallback_options
-            self.browser = webdriver.Firefox(service=self.service, options=self.options)
+            try:
+                self.browser = webdriver.Firefox(service=self.service, options=self.options)
+            except Exception as fallback_exc:
+                print(f"[AFM] Fallback profile start failed: {fallback_exc}. Trying clean profile start.")
+                traceback.print_exc()
+                # Try a clean, ephemeral Firefox start without specifying a profile
+                clean_options = Options()
+                if platform.system() == "Darwin" and os.path.exists(firefox_app_binary):
+                    clean_options.binary_location = firefox_app_binary
+                if get_headless():
+                    clean_options.add_argument("--headless")
+                # Do not add -profile; let Firefox create a clean profile
+                try:
+                    self.options = clean_options
+                    self.browser = webdriver.Firefox(service=self.service, options=self.options)
+                except Exception:
+                    # Re-raise the original fallback exception so upstream handles it
+                    raise
 
         self.wait: WebDriverWait = WebDriverWait(self.browser, 30)
 
@@ -179,6 +206,57 @@ class AffiliateMarketing:
 
         # Set the features
         self.features: Any = features
+
+        # If the browser scraped a placeholder title (e.g. Amazon's "Page Not Found")
+        # or features are empty, attempt a lightweight HTTP fallback using
+        # urllib to fetch the page HTML and extract the <title> and bullets.
+        if (not self.product_title or self.product_title.lower() in ["unknown product", "page not found"]) or not self.features:
+            try:
+                import urllib.request
+                from html import unescape
+                import re
+
+                if get_verbose():
+                    info(f"Attempting HTTP fallback fetch for: {self.affiliate_link}")
+
+                req = urllib.request.Request(
+                    self.affiliate_link,
+                    headers={
+                        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Safari/537.36"
+                    },
+                )
+                with urllib.request.urlopen(req, timeout=15) as resp:
+                    raw = resp.read()
+                    charset = resp.headers.get_content_charset() or "utf-8"
+                    html = raw.decode(charset, errors="replace")
+
+                # title
+                m = re.search(r"<title[^>]*>(.*?)</title>", html, re.I | re.S)
+                if m:
+                    title_text = unescape(m.group(1).strip())
+                    if title_text and title_text.lower() not in ["page not found"]:
+                        self.product_title = title_text
+                        if get_verbose():
+                            info(f"HTTP fallback title: {self.product_title}")
+
+                # bullets
+                m2 = re.search(r"id=[\'\"]feature-bullets[\'\"][^>]*>(.*?)</ul>", html, re.I | re.S)
+                bullets: list[str] = []
+                if m2:
+                    bullets_html = m2.group(1)
+                    items = re.findall(r"<li[^>]*>(.*?)</li>", bullets_html, re.I | re.S)
+                    for it in items:
+                        txt = re.sub(r"<[^>]+>", "", it).strip()
+                        if txt:
+                            bullets.append(txt)
+
+                if bullets and not self.features:
+                    self.features = bullets
+                    if get_verbose():
+                        info(f"HTTP fallback extracted {len(bullets)} bullets")
+            except Exception as exc:
+                if get_verbose():
+                    warning(f"HTTP fallback failed: {exc}")
 
     def generate_response(self, prompt: str) -> str:
         """

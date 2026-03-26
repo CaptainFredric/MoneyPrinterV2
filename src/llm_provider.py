@@ -1,5 +1,6 @@
 import os
 import time
+import traceback
 import ollama
 
 from config import get_ollama_base_url, get_ollama_model
@@ -129,6 +130,13 @@ def generate_text(prompt: str, model_name: str = None, retries: int = 3) -> str:
         last_exc: Exception | None = None
         for attempt in range(retries):
             try:
+                # Debug: show which Ollama endpoint and model we're calling
+                try:
+                    base = get_ollama_base_url()
+                except Exception:
+                    base = "<unknown>"
+                print(f"[llm_provider] Ollama base={base} model={model} attempt={attempt+1}/{retries}")
+
                 response = _client().chat(
                     model=model,
                     messages=[{"role": "user", "content": prompt}],
@@ -139,6 +147,8 @@ def generate_text(prompt: str, model_name: str = None, retries: int = 3) -> str:
                 raise ValueError("Ollama returned an empty response.")
             except Exception as exc:
                 last_exc = exc
+                print(f"[llm_provider] Ollama call failed (attempt {attempt+1}): {exc}")
+                traceback.print_exc()
                 if attempt < retries - 1:
                     time.sleep(2 ** attempt)
                 continue
